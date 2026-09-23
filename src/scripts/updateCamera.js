@@ -3,6 +3,34 @@ import * as THREE from "three";
 
 let cameraTween;
 
+export function resetCamera(controls, camera, duration = 1100) {
+	cameraTween?.stop();
+	const startPosition = camera.position.clone();
+	const startTarget = controls.target.clone();
+	const overviewPosition = new THREE.Vector3(0, 0, 5);
+	const overviewTarget = new THREE.Vector3();
+
+	if (duration === 0) {
+		camera.position.copy(overviewPosition);
+		controls.target.copy(overviewTarget);
+		controls.update();
+		return;
+	}
+
+	cameraTween = new TWEEN.Tween({ progress: 0 })
+		.to({ progress: 1 }, duration)
+		.easing(TWEEN.Easing.Cubic.InOut)
+		.onUpdate(({ progress }) => {
+			camera.position.lerpVectors(startPosition, overviewPosition, progress);
+			controls.target.lerpVectors(startTarget, overviewTarget, progress);
+			controls.update();
+		})
+		.onComplete(() => {
+			cameraTween = undefined;
+		})
+		.start();
+}
+
 export function updateCamera(controls, camera, focus, duration = 1100) {
 	cameraTween?.stop();
 	camera.up.set(0, 1, 0);
@@ -14,15 +42,15 @@ export function updateCamera(controls, camera, focus, duration = 1100) {
 		focus.direction,
 	);
 	const currentDistance = camera.position.distanceTo(controls.target);
-	const minimumDistance = Math.max(focus.satelliteRadius * 2.25, focus.componentRadius * 5);
-	const maximumDistance = focus.satelliteRadius * 4;
+	const minimumDistance = Math.max(focus.satelliteRadius * 3.3, focus.componentRadius * 6.5);
+	const maximumDistance = focus.satelliteRadius * 5.2;
 	const componentDistance = THREE.MathUtils.clamp(
-		focus.satelliteRadius * 2 + focus.componentRadius * 4,
+		focus.satelliteRadius * 3.35 + focus.componentRadius * 4,
 		minimumDistance,
 		maximumDistance,
 	);
 	const distance = THREE.MathUtils.clamp(
-		THREE.MathUtils.lerp(currentDistance, componentDistance, 0.45),
+		THREE.MathUtils.lerp(currentDistance, componentDistance, 0.35),
 		minimumDistance,
 		maximumDistance,
 	);

@@ -113,8 +113,8 @@ export function highlightComponent(component) {
 		const original = originalMaterials.get(mesh);
 		if (!mesh.material.emissive || !original?.emissive) continue;
 
-		mesh.material.emissive.copy(original.emissive).lerp(new THREE.Color(0xeb5b33), 0.22);
-		mesh.material.emissiveIntensity = Math.max(original.emissiveIntensity ?? 0, 0.32);
+		mesh.material.emissive.copy(original.emissive).lerp(new THREE.Color(0xe9845b), 0.11);
+		mesh.material.emissiveIntensity = Math.max(original.emissiveIntensity ?? 0, 0.18);
 	}
 }
 
@@ -132,7 +132,7 @@ export function rotateSatellite() {
 	}
 }
 
-export function resetSatellite() {
+export function resetSatellite(duration = 1500) {
 	// sat weer terug naar de startstand pls
 
 	if (satellite) {
@@ -151,8 +151,13 @@ export function resetSatellite() {
 		};
 
 		// smooth terugdraaien, geen rare snap
+		if (duration === 0) {
+			satellite.rotation.set(endSatelliteRotation.x, endSatelliteRotation.y, endSatelliteRotation.z);
+			return;
+		}
+
 		new TWEEN.Tween(startSatelliteRotation)
-			.to(endSatelliteRotation, 1500)
+			.to(endSatelliteRotation, duration)
 			.easing(TWEEN.Easing.Quadratic.InOut)
 			.onUpdate(() => {
 				satellite.rotation.set(
