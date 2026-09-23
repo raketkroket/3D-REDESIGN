@@ -7,6 +7,7 @@ body { --accent: #f3794f; --surface: rgb(5 10 19 / 88%); --line: #89a4bf; margin
 .site-header p { margin: 0; color: #c4d7e9; }
 .brand { display: inline-flex; align-items: center; gap: .7rem; color: inherit; font-weight: bold; text-decoration: none; }
 .brand img { width: 4.25rem; height: auto; }
+.noscript-notice { width: min(1200px, calc(100% - 2rem)); margin: 0 auto 1rem; border-left: 4px solid var(--accent); padding: .75rem 1rem; background: #1b2633; color: #f7fbff; }
 .intro { max-width: 76ch; padding-block: 2rem; }
 h1, h2, p { margin-top: 0; }
 h1 { margin-bottom: .5rem; font-size: clamp(2rem, 4vw, 3.5rem); line-height: 1.1; }
