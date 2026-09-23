@@ -37,6 +37,7 @@ export function loadSatellite(scene, { onLoad, onError } = {}) {
 				if (!object.isMesh) return;
 				object.material = object.material.clone();
 				originalMaterials.set(object, {
+					color: object.material.color?.clone(),
 					emissive: object.material.emissive?.clone(),
 					emissiveIntensity: object.material.emissiveIntensity,
 				});
@@ -102,6 +103,7 @@ export function getComponentFocus(component) {
 
 export function highlightComponent(component) {
 	for (const [mesh, original] of originalMaterials) {
+		if (original.color && mesh.material.color) mesh.material.color.copy(original.color);
 		if (original.emissive) mesh.material.emissive.copy(original.emissive);
 		if (original.emissiveIntensity !== undefined) {
 			mesh.material.emissiveIntensity = original.emissiveIntensity;
@@ -111,10 +113,14 @@ export function highlightComponent(component) {
 	for (const [mesh, mappedComponent] of meshComponents) {
 		if (mappedComponent !== component) continue;
 		const original = originalMaterials.get(mesh);
-		if (!mesh.material.emissive || !original?.emissive) continue;
+		if (!original) continue;
 
-		mesh.material.emissive.copy(original.emissive).lerp(new THREE.Color(0xe9845b), 0.11);
-		mesh.material.emissiveIntensity = Math.max(original.emissiveIntensity ?? 0, 0.18);
+		if (mesh.material.emissive && original.emissive) {
+			mesh.material.emissive.copy(original.emissive).lerp(new THREE.Color(0xe9845b), 0.11);
+			mesh.material.emissiveIntensity = Math.max(original.emissiveIntensity ?? 0, 0.18);
+		} else if (mesh.material.color && original.color) {
+			mesh.material.color.copy(original.color).lerp(new THREE.Color(0xe9845b), 0.12);
+		}
 	}
 }
 
