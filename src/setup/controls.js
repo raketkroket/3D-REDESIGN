@@ -1,4 +1,4 @@
-// controls 
+// controls voor ff rondkijken
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 let controls;

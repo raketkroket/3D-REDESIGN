@@ -1,4 +1,4 @@
-//responsiveness
+// ff responsive houden op elk scherm
 
 export function handleResize(camera, renderer) {
     window.addEventListener('resize', () => {

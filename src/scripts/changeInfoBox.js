@@ -49,13 +49,13 @@ const data = [
 	},
 ];
 
-// select all HTML elements
+// ff de html dingen pakken
 const infoTitle = document.querySelector(".info-box h3");
 const infoText = document.querySelector(".info-box .text");
 const container = document.querySelector(".container");
 
 export function updateInfobox(e) {
-	// get clicked element id and use custom function for finding the matching title and description
+	// id pakken en de juiste info erbij zoeken
 	const inputId = e.target;
 	const infoBoxData = getMatchingData(inputId);
 
@@ -72,7 +72,7 @@ export function updateInfobox(e) {
 	}
 }
 
-// function om data te matchen
+// ff checken welke data erbij hoort
 function getMatchingData(element) {
 	const itemId = element.id;
 	const jsonMatch = data.find((i) => i.id === itemId);

@@ -1,4 +1,4 @@
-// verlichting op object
+// ff wat licht op de sat gooien
 import * as THREE from 'three';
 
 export function createLights(scene) {

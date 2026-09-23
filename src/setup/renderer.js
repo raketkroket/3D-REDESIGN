@@ -1,4 +1,4 @@
-// camera en scene omzetten naar pixels
+// alles wat 3d is ff op je scherm knallen
 
 import * as THREE from 'three';
 

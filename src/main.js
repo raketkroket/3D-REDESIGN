@@ -16,7 +16,7 @@ import {
 import { createStars } from "./components/objects/star.js";
 import { updateCamera } from "./scripts/updateCamera.js";
 
-// scene setup
+// basis van de 3d shit ff klaarzetten
 const scene = createScene();
 const camera = createCamera();
 const renderer = createRenderer();
@@ -29,19 +29,19 @@ const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 
-// controls met camera en renderer
+// controls ff koppelen aan cam + renderer
 const controls = createControls(camera, renderer);
 let selectedComponent = null;
 
-// licht toevoegen
+// anders zie je dus letterlijk niks lol
 createLights(scene);
 
-// laad satellite
+// sat inladen
 loadSatellite(scene, {
 	onError: () => visualization.classList.add("model-unavailable"),
 });
 
-// add 300 stars to the scene
+// 300 sterretjes voor de vibes
 createStars(300, scene);
 
 function resizeRenderer() {

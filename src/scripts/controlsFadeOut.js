@@ -3,7 +3,7 @@ const toggleControls = document.querySelector(".show-controls");
 const componentPicker = document.querySelector(".component-picker");
 const canvas = document.querySelector("#app");
 
-// if there is a click event inside the component-picker or inside the canvas the the controls dissapear
+// klik je hier? dan mogen de controls ff weg
 [componentPicker, canvas].forEach((element) => {
   element.addEventListener("mousedown", () => {
     if (container) {

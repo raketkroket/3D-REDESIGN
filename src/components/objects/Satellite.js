@@ -1,4 +1,4 @@
-// Satellite.js
+// alles v/d sat zit hier
 import * as THREE from "three";
 import TWEEN from "three/examples/jsm/libs/tween.module.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
@@ -24,11 +24,11 @@ export function loadSatellite(scene, { onLoad, onError } = {}) {
 		function (glbData) {
 			satellite = glbData.scene;
 
-			// positie en schaal
+			// ff op de goeie plek + schaal zetten
 			satellite.position.set(0, 0, 0);
 			satellite.scale.set(0.1, 0.1, 0.1);
 
-			// zet object schuin naar de andere kant
+			// beetje schuin draaien, ziet er chiller uit
 			satellite.rotation.x = THREE.MathUtils.degToRad(40);
 			satellite.rotation.y = THREE.MathUtils.degToRad(-35);
 			satellite.rotation.z = THREE.MathUtils.degToRad(-10);
@@ -45,7 +45,7 @@ export function loadSatellite(scene, { onLoad, onError } = {}) {
 				}
 			});
 
-			//voeg toe aan scene
+			// hoppa, in de scene ermee
 			scene.add(glbData.scene);
 			onLoad?.(satellite);
 		},
@@ -118,39 +118,39 @@ export function highlightComponent(component) {
 	}
 }
 
-// roteren in animatieloop
+// sat draait ff rustig rond in de loop
 export function rotateSatellite() {
 	if (satellite) {
-		// Langzaam draaien rond Y as
+		// rustig om de y-as heen draaien
 		satellite.rotation.y += 0.001;
 
-		// Kleine kanteling rond X as
+		// klein beetje kantelen op x
 		satellite.rotation.x += 0.0005;
 
-		// kleine draai rond Z as
+		// en nog een mini draai op z
 		satellite.rotation.z += 0.0003;
 	}
 }
 
 export function resetSatellite() {
-	// reset the satellite to its starting position
+	// sat weer terug naar de startstand pls
 
 	if (satellite) {
-		// current satellite rotation
+		// ff pakken waar de sat nu staat
 		let startSatelliteRotation = {
 			x: satellite.rotation.x,
 			y: satellite.rotation.y,
 			z: satellite.rotation.z,
 		};
 
-		// target satellite rotation (based on values in LoadSatellite function)
+		// dit is de chill start-stand uit de loader
 		let endSatelliteRotation = {
 			x: 0.698,
 			y: -0.611,
 			z: -0.175,
 		};
 
-		// transition between current rotation and target rotation
+		// smooth terugdraaien, geen rare snap
 		new TWEEN.Tween(startSatelliteRotation)
 			.to(endSatelliteRotation, 1500)
 			.easing(TWEEN.Easing.Quadratic.InOut)

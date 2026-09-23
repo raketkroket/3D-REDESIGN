@@ -1,4 +1,4 @@
-// stand van de camera 
+// startplek v/d cam
 
 import * as THREE from 'three';
 
