@@ -1,4 +1,4 @@
-// main.js: hier word alles ingeladen en doorgegeven aan de pagina
+import * as THREE from "three";
 import TWEEN from "three/examples/jsm/libs/tween.module.js";
 import { createScene } from "./setup/scene.js";
 import { createCamera } from "./setup/camera.js";
@@ -7,45 +7,58 @@ import { createControls, updateControls } from "./setup/controls.js";
 import { createLights } from "./components/lights/lights.js";
 import {
 	loadSatellite,
-	resetSatellite,
+	getSatellite,
+	getComponentFromObject,
+	getComponentFocus,
+	highlightComponent,
 	rotateSatellite,
 } from "./components/objects/Satellite.js";
 import { createStars } from "./components/objects/star.js";
-import { updateInfobox } from "./scripts/changeInfoBox.js";
 import { updateCamera } from "./scripts/updateCamera.js";
-import "./scripts/changeInfoBox.js";
-import { toggleDropdown } from "./scripts/dropdown.js";
-import "./scripts/controlsFadeOut.js";
 
 // scene setup
 const scene = createScene();
 const camera = createCamera();
 const renderer = createRenderer();
+const visualization = document.querySelector(".visualization");
+const canvas = renderer.domElement;
+const componentLinks = [...document.querySelectorAll("[data-3d-object]")];
+const componentDetails = [...document.querySelectorAll("[data-component-info]")];
+const selectionStatus = document.querySelector(".selection-status");
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
 
 // controls met camera en renderer
 const controls = createControls(camera, renderer);
-let paused = false;
+let selectedComponent = null;
 
 // licht toevoegen
 createLights(scene);
 
 // laad satellite
-loadSatellite(scene);
+loadSatellite(scene, {
+	onError: () => visualization.classList.add("model-unavailable"),
+});
 
 // add 300 stars to the scene
 createStars(300, scene);
 
-// responsive
-window.addEventListener("resize", () => {
-	camera.aspect = window.innerWidth / window.innerHeight;
+function resizeRenderer() {
+	const { width, height } = visualization.getBoundingClientRect();
+	if (width === 0 || height === 0) return;
+	camera.aspect = width / height;
 	camera.updateProjectionMatrix();
-	renderer.setSize(window.innerWidth, window.innerHeight);
-});
+	renderer.setSize(width, height, false);
+}
+
+new ResizeObserver(resizeRenderer).observe(visualization);
+resizeRenderer();
 
 function animate() {
 	requestAnimationFrame(animate);
 
-	if (!paused) {
+	if (!selectedComponent && !reduceMotion.matches) {
 		rotateSatellite();
 	}
 
@@ -56,33 +69,49 @@ function animate() {
 
 animate();
 
-// EVENT LISTENERS
-const inputFields = document.querySelector("form");
+function selectComponent(component, { focusDetail = false } = {}) {
+	const link = componentLinks.find((item) => item.dataset["3dObject"] === component);
+	if (!link) return;
 
-inputFields.addEventListener("change", (e) => {
-	resetSatellite();
-	updateInfobox(e);
-	updateCamera(controls, camera, {
-		x: e.target.dataset.x,
-		y: e.target.dataset.y,
-		z: e.target.dataset.z,
+	selectedComponent = component;
+	highlightComponent(component);
+	const focus = getComponentFocus(component);
+	if (focus) updateCamera(controls, camera, focus, reduceMotion.matches ? 0 : 1100);
+
+	componentLinks.forEach((item) => item.removeAttribute("aria-current"));
+	link.setAttribute("aria-current", "true");
+	componentDetails.forEach((detail) => {
+		detail.hidden = detail.id !== link.hash.slice(1);
 	});
 
-	// paused becomes true when anything other than default is selected
-	paused = e.target.id !== "default";
-
-	if (inputFields.classList.contains("dropdown-shown")) {
-		inputFields.classList.remove("dropdown-shown");
-		toggleControls.classList.remove("hide");
+	const detail = document.querySelector(link.hash);
+	selectionStatus.textContent = `${link.textContent.trim()} selected.`;
+	if (focusDetail && detail) {
+		detail.scrollIntoView({ behavior: reduceMotion.matches ? "auto" : "smooth", block: "start" });
+		detail.focus({ preventScroll: true });
 	}
+}
+
+document.documentElement.classList.add("js-enhanced");
+componentDetails.forEach((detail) => (detail.hidden = true));
+
+componentLinks.forEach((link) => {
+	link.addEventListener("click", (event) => {
+		event.preventDefault();
+		history.replaceState(null, "", link.hash);
+		selectComponent(link.dataset["3dObject"], { focusDetail: true });
+	});
+	link.addEventListener("focus", () => selectComponent(link.dataset["3dObject"]));
 });
 
-const componentPicker = document.querySelector(".component-picker");
-const toggleControls = document.querySelector(".show-controls");
-
-componentPicker.addEventListener("click", () => {
-	toggleDropdown();
-	inputFields.classList.contains("dropdown-shown")
-		? toggleControls.classList.add("hide")
-		: toggleControls.classList.remove("hide");
+canvas.addEventListener("click", (event) => {
+	const satellite = getSatellite();
+	if (!satellite) return;
+	const bounds = canvas.getBoundingClientRect();
+	pointer.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
+	pointer.y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
+	raycaster.setFromCamera(pointer, camera);
+	const hit = raycaster.intersectObject(satellite, true)[0];
+	const component = hit && getComponentFromObject(hit.object);
+	if (component) selectComponent(component, { focusDetail: true });
 });

@@ -9,95 +9,56 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Varela+Round&display=swap" rel="stylesheet" />
-  <title>Hackathon 3D</title>
+  <title>NEBULA Xplorer Satellite</title>
 </head>
 
 <body>
-  <canvas id="app"></canvas>
+  <header class="site-header">
+    <a class="brand" href="#overview"><img src="./src/assets/logo.svg" alt="SRON" /> NEBULA Xplorer</a>
+    <p>Interactive spacecraft overview</p>
+  </header>
+
   <main>
-    <section class="component-picker">
-      <hgroup id="hgroup">
-        <h2>Choose Component</h2>
-        <p>Get more information about the component</p>
-      </hgroup>
-
-      <form id="form">
-        <label><input type="radio" name="component" id="default" data-x="0" data-y="0" data-z="5">
-          Clear Selection</label>
-        <label><input type="radio" name="component" id="component-1" data-x="0.873" data-y="1.670" data-z="1.370" />
-          X-ray Instrument</label>
-        <label><input type="radio" name="component" id="component-2" data-x="-0.621" data-y="0.218" data-z="2.234" />
-          Star Tracker Module</label>
-        <label><input type="radio" name="component" id="component-3" data-x="-1.081" data-y="-1.338" data-z="1.571" />
-          Dawn 4U Cubedrive</label>
-        <label><input type="radio" name="component" id="component-4" data-x="-0.923" data-y="-2.077" data-z="0.508" />
-          S-Band Antenna</label>
-        <label><input type="radio" name="component" id="component-5" data-x="-1.069" data-y="-2.069" data-z="-0.066" />
-          Sun Sensor</label>
-        <label><input type="radio" name="component" id="component-6" data-x="-0.439" data-y="0.165" data-z="-2.281" />
-          Magnetorquers</label>
-        <label><input type="radio" name="component" id="component-7" data-x="-0.800" data-y="-3.088" data-z="0.978" />
-          Solar Panel</label>
-      </form>
+    <section class="intro" id="overview" aria-labelledby="page-title">
+      <h1 id="page-title">NEBULA Xplorer Satellite</h1>
+      <p>NEBULA Xplorer is a cutting-edge X-ray satellite exploring extreme objects like black holes and neutron stars. By tracking how X-ray emissions change over time, it reveals what is happening in these intense environments.</p>
+      <p>This student-driven mission combines innovation with academic and industry expertise. Its high time resolution and continuous observations reveal how matter behaves, how jets form, and how these systems evolve.</p>
     </section>
 
-    <section class="wrapper">
-      <img class="logo" src="./src/assets/logo.svg" alt="logo" />
-      <article class="info-box">
-        <p id="jswarning">Zet alsjeBLIEFT je javascript aan het is een three<span>JS</span> project wat denk je dat dat betekent!!??!?</p>
-        <h3>Nebula Xplorer Satellite</h3>
-        <div class="text">
-          <p>
-            Nebula Xplorer is a cutting-edge X-ray satellite exploring extreme objects like black holes and neutron
-            stars.
-            By tracking how X-ray emissions change over time, it reveals what’s happening in these intense environments.
-          </p>
-          <p>
-            This student-driven mission, developed with academic and industry partners, combines innovation with
-            real-world expertise. With high time resolution and continuous observations, it uncovers how matter behaves,
-            how jets form, and how these systems evolve.
-          </p>
-          <p>
-            Using advanced spectral-timing techniques, it provides a unique
-            view into the structure and physics of the universe’s most extreme regions.
-          </p>
-          <p>
-            Ready to explore the unknown?
-            Discover the components of our satellite.
-          </p>
-        </div>
-      </article>
+    <section class="experience" aria-labelledby="model-title">
+      <div class="visualization" id="visualization">
+        <h2 id="model-title">Satellite model</h2>
+        <canvas id="app" role="img" aria-describedby="model-description">A 3D model of the NEBULA Xplorer satellite. The component descriptions below provide the complete satellite overview.</canvas>
+        <p id="model-description" class="model-instructions">Drag to rotate the 3D model and scroll or pinch to zoom. Use the component links for a keyboard-accessible alternative.</p>
+      </div>
+
+      <nav class="component-navigation" aria-labelledby="components-title">
+        <h2 id="components-title">Satellite components</h2>
+        <ul>
+          <li><a href="#xray-instrument" data-3d-object="xrayInstrument" data-x="0.873" data-y="1.670" data-z="1.370">X-Ray Instrument</a></li>
+          <li><a href="#star-tracker-module" data-3d-object="starTrackerModule" data-x="-0.621" data-y="0.218" data-z="2.234">Star Tracker Module</a></li>
+          <li><a href="#dawn-4u-cubedrive" data-3d-object="dawn4UCubeDrive" data-x="-1.081" data-y="-1.338" data-z="1.571">Dawn 4U CubeDrive</a></li>
+          <li><a href="#s-band-antenna" data-3d-object="sBandAntenna" data-x="-0.923" data-y="-2.077" data-z="0.508">S-Band Antenna</a></li>
+          <li><a href="#sun-sensor" data-3d-object="sunSensor" data-x="-1.069" data-y="-2.069" data-z="-0.066">Sun Sensor</a></li>
+          <li><a href="#magnetorquers" data-3d-object="magnetorquers" data-x="-0.439" data-y="0.165" data-z="-2.281">Magnetorquers</a></li>
+          <li><a href="#solar-panel" data-3d-object="solarPanel" data-x="-0.800" data-y="-3.088" data-z="0.978">Solar Panel</a></li>
+        </ul>
+        <p class="selection-status" aria-live="polite">No component selected.</p>
+      </nav>
     </section>
 
-    <section class="container">
-      <section class="scroll">
-        <img class="arrow" src="./src/assets/arrow.svg" alt="scroll down" />
-        <p>Zoom in</p>
-      </section>
-
-      <section class="drag">
-        <img class="arrow" src="./src/assets/arrow-drag.svg" alt="drag the satellite" />
-        <p>Drag satellite</p>
-      </section>
+    <section class="component-details" aria-label="Component information">
+      <article id="xray-instrument" data-component-info tabindex="-1"><h2>X-Ray Instrument</h2><p>Sending a telescope to space means engineering for the impossible: it has to survive a rocket launch, then operate flawlessly in a vacuum where temperatures swing by hundreds of degrees. NEBULA-Xplorer's X-ray instrument is suspended on three precision titanium mounts that isolate it from shock and temperature change, anchored to a reinforced panel, and oriented to use every centimeter of space inside the rocket fairing.</p></article>
+      <article id="star-tracker-module" data-component-info tabindex="-1"><h2>Star Tracker Module</h2><p>To observe a faint X-ray source hundreds of light-years away, NEBULA-Xplorer needs to hold its aim with extraordinary precision. Star trackers continuously scan the sky, recognize patterns of stars, and determine the spacecraft's orientation down to a few arcseconds. Two units ensure constant visibility of stars even during rotation.</p></article>
+      <article id="dawn-4u-cubedrive" data-component-info tabindex="-1"><h2>Dawn 4U CubeDrive</h2><p>The propulsion system counters atmospheric drag, performs collision avoidance, and enables controlled reentry. This compact thruster unit carries under two kilograms of propellant and is precisely aligned to ensure stable, accurate maneuvers throughout the mission.</p></article>
+      <article id="s-band-antenna" data-component-info tabindex="-1"><h2>S-Band Antenna</h2><p>The S-band antenna enables communication with Earth during brief contact windows. It transmits gigabytes of scientific data over large distances in minutes, ensuring valuable observations reach ground stations.</p></article>
+      <article id="sun-sensor" data-component-info tabindex="-1"><h2>Sun Sensor</h2><p>Sun sensors provide basic orientation by detecting the Sun's position. They are crucial during emergencies or initial deployment, helping the spacecraft maintain power and avoid dangerous pointing scenarios.</p></article>
+      <article id="magnetorquers" data-component-info tabindex="-1"><h2>Magnetorquers</h2><p>These external devices generate magnetic torque to control the satellite's orientation and desaturate reaction wheels. By interacting with Earth's magnetic field, they provide efficient three-axis attitude control without the complexity of thrusters.</p></article>
+      <article id="solar-panel" data-component-info tabindex="-1"><h2>Solar Panel</h2><p>These panels convert sunlight into electricity to power the satellite's systems and instruments. Positioned to capture maximum sunlight, they support continuous operation when combined with onboard energy storage during eclipse.</p></article>
     </section>
-
-    <button class="show-controls hide" aria-label="Toggle contols"><svg viewBox="0 0 32 32" version="1.1"
-        xmlns="http://www.w3.org/2000/svg">
-        <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
-        <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
-        <g id="SVGRepo_iconCarrier">
-          <path
-            d="M18 23l-1-0v-8.938c0-0.011-0.003-0.021-0.003-0.031s0.003-0.020 0.003-0.031c0-0.552-0.448-1-1-1h-2c-0.552 0-1 0.448-1 1s0.448 1 1 1h1v8h-1c-0.552 0-1 0.448-1 1s0.448 1 1 1h4c0.552 0 1-0.448 1-1s-0.448-1-1-1zM16 11c1.105 0 2-0.896 2-2s-0.895-2-2-2-2 0.896-2 2 0.896 2 2 2zM16-0c-8.836 0-16 7.163-16 16s7.163 16 16 16c8.837 0 16-7.163 16-16s-7.163-16-16-16zM16 30.031c-7.72 0-14-6.312-14-14.032s6.28-14 14-14 14 6.28 14 14-6.28 14.032-14 14.032z">
-          </path>
-        </g>
-      </svg></button>
   </main>
 
   <script type="module" src="/src/main.js"></script>
-  <script>
-    document.getElementById("jswarning").remove();
-  </script>
-  <script type="module" src="/src/scripts/dropdown.js"></script>
 </body>
 
 </html>

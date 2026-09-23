@@ -7,11 +7,11 @@ export function createRenderer() {
 
     const renderer = new THREE.WebGLRenderer({
         canvas,
-        antialias: true
+        antialias: true,
+        alpha: true
     });
 
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
     return renderer;
 }
