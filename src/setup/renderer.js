@@ -5,13 +5,19 @@ import * as THREE from 'three';
 export function createRenderer() {
     const canvas = document.querySelector('#app');
 
-    const renderer = new THREE.WebGLRenderer({
-        canvas,
-        antialias: true,
-        alpha: true
-    });
+    if (!canvas) return null;
 
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    try {
+        const renderer = new THREE.WebGLRenderer({
+            canvas,
+            antialias: true,
+            alpha: true
+        });
 
-    return renderer;
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        return renderer;
+    } catch {
+        return null;
+    }
 }

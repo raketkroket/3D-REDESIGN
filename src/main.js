@@ -17,11 +17,15 @@ import {
 import { createStars } from "./components/objects/star.js";
 import { resetCamera, updateCamera } from "./scripts/updateCamera.js";
 
+function initializeExperience() {
+const visualization = document.querySelector(".visualization");
+const renderer = createRenderer();
+
+if (!visualization || !renderer) return;
+
 // basis van de 3d shit ff klaarzetten
 const scene = createScene();
 const camera = createCamera();
-const renderer = createRenderer();
-const visualization = document.querySelector(".visualization");
 const canvas = renderer.domElement;
 const componentLinks = [...document.querySelectorAll("[data-3d-object]")];
 const componentDetails = [...document.querySelectorAll("[data-component-info]")];
@@ -45,7 +49,7 @@ createLights(scene);
 
 // sat inladen
 loadSatellite(scene, {
-	onError: () => visualization.classList.add("model-unavailable"),
+	onError: activateFallback,
 });
 
 // 300 sterretjes voor de vibes
@@ -138,6 +142,12 @@ function resetExperience() {
 	updateSelectionStatus(null);
 }
 
+function activateFallback() {
+	document.documentElement.classList.remove("js-enhanced");
+	visualization.classList.add("model-unavailable");
+	componentDetails.forEach((detail) => (detail.hidden = false));
+}
+
 document.documentElement.classList.add("js-enhanced");
 componentDetails.forEach((detail) => (detail.hidden = true));
 
@@ -175,3 +185,10 @@ canvas.addEventListener("click", (event) => {
 	const component = hit && getComponentFromObject(hit.object);
 	if (component) selectComponent(component);
 });
+}
+
+try {
+	initializeExperience();
+} catch {
+	document.documentElement.classList.remove("js-enhanced");
+}
