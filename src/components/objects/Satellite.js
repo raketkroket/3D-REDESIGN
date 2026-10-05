@@ -22,36 +22,6 @@ const componentMeshNames = {
 		"Concentrator_Sunshields",
 		"Concentrator_Sunshades",
 		"Instrument_Electronics_Module",
-		"Instrument_(Last)",
-		"Top_Side_Panel",
-		"Upper_Side_Panel",
-		"Upper_Side_Panel_1",
-		"Lower_Side_Panel",
-		"Lower_Side_Panel_1",
-		"Bottom_Side_Panel",
-		"Six_OB_B",
-		"middle_rib",
-		"back_fitting",
-		"left_fitting",
-		"right_fitting",
-		"Back_OBA_rod",
-		"Back_OBA_rod_1",
-		"Front_OBA_rod",
-		"Front_OBA_rod_1",
-		"Rear_FPA_Rod",
-		"Rear_FPA_Rod_1",
-		"Science_baffle",
-		"Base_shield_plate",
-		"Collar_(New)",
-		"Sensor_(New)",
-		"Fe55",
-		"Fe55_Cover",
-		"Callibration_Tube",
-		"Head_Callibration_tube",
-		"BackplateFe55",
-		"PA210_(Preamplifier)",
-		"PA-230_(Preamplifier-Pins_connection)",
-		"Housing_(1)",
 	],
 	starTrackerModule: [
 		"ST-16RT2-LRB",
@@ -197,10 +167,12 @@ function getObjectPath(object) {
 
 function matchesComponentName(name, candidates) {
 	if (!name) return false;
-	return candidates.some((candidate) => {
-		if (!candidate) return false;
-		return name === candidate || name.startsWith(candidate) || name.includes(candidate);
-	});
+	const pathTokens = name.split(" ");
+	return candidates.some((candidate) => candidate && pathTokens.some((token) => token === candidate || token.startsWith(candidate)));
+}
+
+function matchesInteriorHideName(name, candidates) {
+	return candidates.some((candidate) => candidate && name.includes(candidate));
 }
 
 function registerMeshComponent(object, root) {
@@ -267,7 +239,7 @@ function setInstrumentInteriorVisibility(isInterior) {
 		// Keep the optical bench, concentrators and mounting hardware visible.
 		const instrumentWall = object.parent?.name.startsWith("InstrumentHexa_B")
 			&& /^(?:P2|P3|P6|P12)\d*$/.test(object.name);
-		const shouldHide = isInterior && (instrumentWall || matchesComponentName(getObjectPath(object), satelliteInteriorHideNames.map((name) => name.toLowerCase().replace(/[\s:.-]+/g, "_"))));
+		const shouldHide = isInterior && (instrumentWall || matchesInteriorHideName(getObjectPath(object), satelliteInteriorHideNames.map((name) => name.toLowerCase().replace(/[\s:.-]+/g, "_"))));
 		if (shouldHide) {
 			object.userData.wasHiddenByInterior = true;
 			object.visible = false;

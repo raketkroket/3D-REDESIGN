@@ -47,10 +47,10 @@ export function updateCamera(controls, camera, focus, duration = 1100) {
 		focus.direction,
 	);
 	const currentDistance = camera.position.distanceTo(controls.target);
-	const minimumDistance = Math.max(focus.satelliteRadius * 3.3, focus.componentRadius * 6.5);
-	const maximumDistance = focus.satelliteRadius * 5.2;
+	const minimumDistance = Math.max(focus.satelliteRadius * 1.2, focus.componentRadius * 4.5);
+	const maximumDistance = focus.satelliteRadius * 2.75;
 	const componentDistance = THREE.MathUtils.clamp(
-		focus.satelliteRadius * 3.35 + focus.componentRadius * 4,
+		focus.satelliteRadius * 1.55 + focus.componentRadius * 4.5,
 		minimumDistance,
 		maximumDistance,
 	);
