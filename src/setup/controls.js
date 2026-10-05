@@ -11,8 +11,8 @@ export function createControls(camera, renderer) {
     controls.enableZoom = true;
     controls.enablePan = false;
     controls.enableRotate = true;
-    controls.rotateSpeed = 0.55;
-    controls.zoomSpeed = 0.75;
+    controls.rotateSpeed = 0.82;
+    controls.zoomSpeed = 0.82;
 
     return controls;
 }
