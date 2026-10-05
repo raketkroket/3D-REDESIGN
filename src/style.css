@@ -1,7 +1,7 @@
 :root { color-scheme: dark; }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
-body { --accent: #e9845b; --accent-soft: rgb(233 132 91 / 18%); --ink: #f5f2ed; --muted: #aeb9c6; --line: rgb(185 202 219 / 24%); --surface: rgb(6 12 20 / 74%); margin: 0; color: var(--ink); background: #05080d url("/galaxy.jpg") center / cover fixed; background-blend-mode: multiply; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 1rem; line-height: 1.65; }
+body { --accent: #e9845b; --accent-soft: rgb(233 132 91 / 18%); --ink: #f5f2ed; --muted: #aeb9c6; --line: rgb(185 202 219 / 24%); --surface: rgb(6 12 20 / 74%); margin: 0; color: var(--ink); background: #05080e; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 1rem; line-height: 1.65; }
 .site-header, main { width: min(94vw, 1800px); margin-inline: auto; }
 .site-header { display: flex; align-items: center; gap: 1.25rem; min-height: 4.5rem; border-bottom: 1px solid rgb(185 202 219 / 18%); }
 .brand { display: inline-flex; align-items: center; gap: .75rem; color: inherit; font-size: .8rem; font-weight: 600; letter-spacing: .04em; text-decoration: none; text-transform: uppercase; white-space: nowrap; }
@@ -24,7 +24,7 @@ h1 { max-width: none; margin-bottom: 1rem; font-size: clamp(2.5rem, 4vw, 3.5rem)
 .intro p:last-child { margin-bottom: 0; }
 .intro-instructions { display: none; }
 .experience { display: grid; gap: clamp(1.5rem, 3vw, 3.5rem); align-items: stretch; }
-.visualization { position: relative; min-height: min(68vh, 48rem); overflow: hidden; background: rgb(3 7 12 / 48%); box-shadow: inset 0 1px 0 rgb(255 255 255 / 8%), 0 1.5rem 4rem rgb(0 0 0 / 24%); }
+.visualization { position: relative; min-height: min(68vh, 48rem); overflow: hidden; background: rgb(24 42 60 / 18%); box-shadow: inset 0 1px 0 rgb(255 255 255 / 8%), 0 1.5rem 4rem rgb(0 0 0 / 24%); }
 .visualization::before { position: absolute; z-index: 1; top: 0; left: 0; width: 3.5rem; height: 2px; background: var(--accent); content: ""; }
 .visualization h2 { position: absolute; z-index: 1; top: 1.5rem; left: 1.5rem; margin: 0; }
 #app { display: block; width: 100%; height: 100%; cursor: grab; }
@@ -134,3 +134,68 @@ html:not(.js-enhanced):has(#solar-panel:target) a[href="#solar-panel"] .componen
 	html:not(.js-enhanced) .component-navigation { margin-bottom: 1rem; }
 	/* nav staat in de html al voor de info, dus mobiel komt dit vanzelf goed */
 }
+html.js-enhanced .earth-horizon { display: none; }
+.optics-panel { position:absolute;z-index:4;top:1.5rem;left:1.5rem;max-width:23rem;padding:1rem;background:rgb(15 30 45 / 92%);border:1px solid var(--line);border-radius:.5rem; }
+.optics-panel p {margin:.4rem 0;font-size:.85rem;}
+.optics-panel label {display:block;font-size:.8rem;margin-top:.6rem;}
+.optics-panel select,.optics-panel button {max-width:100%;padding:.5rem;background:#263e52;color:white;border:1px solid #95aec2;border-radius:.3rem;}
+.optics-panel[hidden] {display:none;}
+.experience.optical-view .component-navigation,.experience.optical-view .component-details {visibility:hidden;}
+.view-switcher {max-width:calc(100% - 3rem);}
+@media(max-width:899px) {.optics-panel{top:.75rem;left:.75rem;max-width:15rem;padding:.65rem;} .optics-panel p{font-size:.75rem;} .experience.optical-view .component-navigation,.experience.optical-view .component-details{display:none;} }
+
+.view-switcher button {padding:.5rem .75rem;border:1px solid rgb(185 202 219 / 65%);background:rgb(15 30 45 / 90%);color:#f5f2ed;cursor:pointer;border-radius:.25rem;}
+.view-switcher button[aria-pressed="true"] {outline:2px solid #aacfe8;outline-offset:2px;}
+.optical-overview {max-width:50rem;margin:2rem auto;padding:1rem;}
+
+/* Toolbar is a sibling of the canvas, above all model/info overlays. */
+.view-switcher {position:absolute;z-index:20;top:1rem;left:50%;bottom:auto;transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;gap:.5rem;width:max-content;max-width:calc(100% - 2rem);padding:.7rem;background:rgb(13 28 43 / 96%);border:1px solid #8ba6bd;border-radius:.6rem;pointer-events:auto;}
+.view-switcher button {min-height:44px;min-width:76px;font-size:.8rem;}
+.view-switcher button:focus-visible,.optics-panel button:focus-visible,.optics-panel select:focus-visible {outline:3px solid #c7e9ff;outline-offset:3px;}
+.optics-panel {z-index:10;top:6.5rem;pointer-events:auto;}
+.experience.optical-view ~ .intro,main:has(.optical-view) .intro {display:none!important;}
+.experience-meta {pointer-events:none;}
+@media(max-width:899px) {.view-switcher{position:relative;order:-1;top:auto;left:auto;transform:none;width:auto;max-width:none;margin:0 .75rem;} .optics-panel{top:7.5rem;} }
+
+.experience {position:relative;}
+
+.view-switcher {gap:.2rem;padding:.35rem;border:0;border-radius:2rem;background:rgb(10 20 30 / 92%);box-shadow:0 4px 20px rgb(0 0 0 / 15%);}
+.view-switcher button {border:0!important;background:transparent!important;border-radius:1.5rem;padding:.65rem .85rem;min-width:0;font-weight:500;}
+.view-switcher button[aria-pressed="true"] {outline:0;background:#e8eef2!important;color:#17212b;}
+.view-switcher #rotation-toggle {border-left:1px solid #536271!important;border-radius:0;color:#bac7d2;}
+.view-switcher #rotation-toggle[aria-pressed="true"] {border-left:0!important;border-radius:1.5rem;color:#17212b;}
+.optics-panel {background:rgb(14 25 35 / 92%);border:0;border-radius:.6rem;}
+.optical-components {display:flex;flex-wrap:wrap;gap:.35rem;margin:.7rem 0;}
+.optical-components button {font-size:.72rem;}
+@media(max-width:899px){.view-switcher{border-radius:.75rem;} }
+
+/* The instrument uses its own navigation and explanatory cards. */
+.instrument-navigation { border-block: 1px solid var(--line); padding-block: 1.25rem; }
+.instrument-navigation h2 { margin-bottom: 1rem; color: var(--muted); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; }
+.instrument-navigation ul { display: grid; margin: 0; padding: 0; list-style: none; }
+.instrument-navigation li { border-top: 1px solid rgb(185 202 219 / 14%); }
+.instrument-navigation a { display: grid; grid-template-columns: 1.8rem minmax(0, 1fr); gap: .45rem; padding-block: .65rem; color: var(--ink); font-size: .85rem; text-decoration: none; }
+.instrument-navigation a[aria-current="true"] { color: var(--accent); }
+.instrument-navigation a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.instrument-details p { color: rgb(245 242 237 / 78%); }
+.instrument-details article h2 { margin-bottom: .85rem; font-size: clamp(1.6rem, 1.8vw, 2rem); font-weight: 500; line-height: 1.1; }
+.instrument-navigation[hidden], .instrument-details[hidden] { display: none !important; }
+.experience.instrument-view .component-navigation, .experience.instrument-view .component-details,
+main:has(.instrument-view) .intro { display: none !important; }
+html.js-enhanced .instrument-details article[hidden] { display: none; }
+html.js-enhanced .instrument-details.has-selection .instrument-prompt { display: none; }
+@media (min-width: 900px) {
+    html.js-enhanced .instrument-navigation, html.js-enhanced .instrument-details { position: absolute; z-index: 2; top: 50%; width: clamp(17.5rem, 20vw, 20rem); transform: translateY(-50%); border: 0; padding: 0; }
+    html.js-enhanced .instrument-navigation { right: clamp(2.5rem, 5vw, 5rem); }
+    html.js-enhanced .instrument-details { left: clamp(2.5rem, 5vw, 5rem); }
+    html.js-enhanced .instrument-details p { max-width: 34ch; font-size: .84rem; line-height: 1.7; }
+    .instrument-prompt { font-size: .85rem; }
+}
+@media (max-width: 899px) {
+    html.js-enhanced .visualization { height: min(62vh, 38rem); min-height: 22rem; }
+    html.js-enhanced .instrument-navigation { order: 2; }
+    html.js-enhanced .instrument-details { order: 3; padding-bottom: 2rem; }
+}
+html:not(.js-enhanced) .instrument-navigation, html:not(.js-enhanced) .instrument-details { display: block !important; }
+html:not(.js-enhanced) .instrument-details article { border-top: 1px solid var(--line); padding: 1.25rem; }
+html:not(.js-enhanced) .instrument-prompt { display: none; }

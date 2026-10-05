@@ -1,27 +1,30 @@
-// ff wat licht op de sat gooien
-import * as THREE from 'three';
+import * as THREE from "three";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
-export function createLights(scene) {
-    // Softer ambient fill + stronger directional separation makes the model read as 3D.
-    const hemisphere = new THREE.HemisphereLight(0xdcecff, 0x0b0e13, 0.82);
-
-    const mainLight = new THREE.DirectionalLight(0xfff1df, 4.1);
-    mainLight.position.set(9, 12, 10);
-
-    const fillLight = new THREE.DirectionalLight(0x9fcaff, 1.15);
-    fillLight.position.set(-11, 1, 7);
-
-    const rimLight = new THREE.DirectionalLight(0xc8e2ff, 3.35);
-    rimLight.position.set(3, 8, -13);
-
-    const lowerFill = new THREE.DirectionalLight(0xffb890, 0.72);
-    lowerFill.position.set(-3, -8, 4);
-
-    scene.add(hemisphere);
-    scene.add(mainLight);
-    scene.add(fillLight);
-    scene.add(rimLight);
-    scene.add(lowerFill);
-
-    return { update: () => {} };
+export function createLights(scene, renderer) {
+    const room = new RoomEnvironment();
+    const generator = new THREE.PMREMGenerator(renderer);
+    scene.environment = generator.fromScene(room, 0.04).texture;
+    scene.environmentIntensity = 0.5;
+    generator.dispose();
+    room.dispose();
+    const hemisphere = new THREE.HemisphereLight(0xdfe8f2, 0x677487, 0.32);
+    const key = new THREE.DirectionalLight(0xffffff, 2.7);
+    const fill = new THREE.DirectionalLight(0xf0f4ff, 0.5);
+    const rim = new THREE.DirectionalLight(0xe8f1ff, 1.1);
+    const offsets = [
+        [key, new THREE.Vector3(-3, 4, 6)],
+        [fill, new THREE.Vector3(4, 1, 3)],
+        [rim, new THREE.Vector3(1, 3, -4)],
+    ];
+    scene.add(hemisphere, key, fill, rim, key.target, fill.target, rim.target);
+    return {
+        update(camera, target) {
+            // Keep the light balance stable while the visitor orbits the assembly.
+            for (const [light, offset] of offsets) {
+                light.position.copy(offset).applyQuaternion(camera.quaternion).add(target);
+                light.target.position.copy(target);
+            }
+        },
+    };
 }
