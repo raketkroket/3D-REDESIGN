@@ -43,13 +43,13 @@ const componentMeshes = new Map();
 const highlightedMeshes = new Set();
 
 const visualCategories = {
-	BODY_DARK: new THREE.MeshStandardMaterial({ name: "Nebula Xplorer Base / BODY_DARK", color: 0x343940, metalness: 0.38, roughness: 0.3, side: THREE.DoubleSide }),
-	SOLAR_CELL_BLUE: new THREE.MeshStandardMaterial({ name: "Nebula Xplorer Solar Panel / SOLAR_CELL_BLUE", color: 0x123e78, emissive: 0x071b34, emissiveIntensity: 0.24, metalness: 0.55, roughness: 0.22, side: THREE.DoubleSide }),
-	SOLAR_FRAME_METAL: new THREE.MeshStandardMaterial({ name: "Nebula Xplorer Solar Panel / SOLAR_FRAME_METAL", color: 0x454b52, metalness: 0.62, roughness: 0.25, side: THREE.DoubleSide }),
-	STRUCTURE_ALUMINIUM: new THREE.MeshStandardMaterial({ name: "Nebula Xplorer Base / STRUCTURE_ALUMINIUM", color: 0xd6d8db, metalness: 0.82, roughness: 0.24, side: THREE.DoubleSide }),
-	INSTRUMENT_METAL: new THREE.MeshStandardMaterial({ name: "Nebula Xplorer Base / INSTRUMENT_METAL", color: 0xbfc4ca, metalness: 0.76, roughness: 0.27, side: THREE.DoubleSide }),
-	GOLD_EDGE: new THREE.MeshStandardMaterial({ name: "Nebula Xplorer Base / GOLD_EDGE", color: 0xa69b4d, metalness: 0.58, roughness: 0.25, side: THREE.DoubleSide }),
-	SENSOR: new THREE.MeshStandardMaterial({ name: "Nebula Xplorer Base / SENSOR", color: 0xb5bbc2, metalness: 0.68, roughness: 0.23, side: THREE.DoubleSide }),
+	BODY_DARK: new THREE.MeshStandardMaterial({ name: "Nebula Xplorer Base / BODY_DARK", color: 0x404348, metalness: 0.2824, roughness: 0.3872727155685425, side: THREE.DoubleSide }),
+	SOLAR_CELL_BLUE: new THREE.MeshStandardMaterial({ name: "Nebula Xplorer Solar Panel / SOLAR_CELL_BLUE", color: 0x174172, emissive: 0x174172, emissiveIntensity: 0.3, metalness: 0.4471, roughness: 0.307272732257843, side: THREE.DoubleSide }),
+	SOLAR_FRAME_METAL: new THREE.MeshStandardMaterial({ name: "Nebula Xplorer Solar Panel / SOLAR_FRAME_METAL", color: 0x404348, metalness: 0.2824, roughness: 0.307272732257843, side: THREE.DoubleSide }),
+	STRUCTURE_ALUMINIUM: new THREE.MeshStandardMaterial({ name: "Nebula Xplorer Base / STRUCTURE_ALUMINIUM", color: 0xcacaca, metalness: 0.7921, roughness: 0.3872727155685425, side: THREE.DoubleSide }),
+	INSTRUMENT_METAL: new THREE.MeshStandardMaterial({ name: "Nebula Xplorer Base / INSTRUMENT_METAL", color: 0xcacaca, metalness: 0.7921, roughness: 0.3872727155685425, side: THREE.DoubleSide }),
+	GOLD_EDGE: new THREE.MeshStandardMaterial({ name: "Nebula Xplorer Base / GOLD_EDGE", color: 0x918d47, metalness: 0.2745, roughness: 0.3872727155685425, side: THREE.DoubleSide }),
+	SENSOR: new THREE.MeshStandardMaterial({ name: "Nebula Xplorer Base / SENSOR", color: 0xa5a5a5, metalness: 0.6476, roughness: 0.3872727155685425, side: THREE.DoubleSide }),
 };
 
 const bodyMeshNames = new Set(["sidepanel_c4", "mirrored_sidepanel_c4", "lv_adapter_panel_c4", "part104", "part264", "part266", "part268", "part272", "part272_1", "p2", "p2_1", "p3", "p3_1", "p6", "p12", "six_ob_b", "concentrator_sunshades_step"]);
