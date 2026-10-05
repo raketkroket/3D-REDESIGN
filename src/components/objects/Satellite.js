@@ -35,8 +35,7 @@ const componentMeshNames = {
 	solarPanel: ["Solar Panels_step", "Solar Panels", "Deployed 910x570 Sparkwing", "SARA_", "SARA_Mounting_SolarArray", "SARA-v02.01.00.001_CASING_REV00_stp_1"],
 };
 
-const satelliteInteriorHideNames = ["Top_Side_Panel", "Upper_Side_Panel", "Lower_Side_Panel", "Bottom_Side_Panel", "Solar Panels_step", "Solar Panels", "Deployed 910x570 Sparkwing", "SARA_", "SARA_Mounting_SolarArray", "SARA-v02.01.00.001_CASING_REV00_stp_1", "Side_Panel", "side_panel", "Panel", "Cover", "Outer_Panel", "Exterior"];
-const satelliteInteriorHideCategories = new Set(["BODY_DARK", "SOLAR_CELL_BLUE", "SOLAR_FRAME_METAL"]);
+const satelliteInteriorHideNames = ["Top_Side_Panel", "Upper_Side_Panel", "Lower_Side_Panel", "Bottom_Side_Panel", "Solar Panels_step", "Solar Panels", "Deployed 910x570 Sparkwing", "SARA_", "SARA_Mounting_SolarArray", "SARA-v02.01.00.001_CASING_REV00_stp_1", "Side_Panel", "side_panel", "Panel"];
 
 const meshComponents = new Map();
 const originalMaterials = new Map();
@@ -99,7 +98,6 @@ function prepareModelMaterials(root, applyReferenceAppearance) {
 		if (!object.isMesh || !object.material) return;
 		const importedMaterials = Array.isArray(object.material) ? object.material : [object.material];
 		const category = applyReferenceAppearance ? getVisualCategory(object) : "OTHER";
-		object.userData.nebulaVisualCategory = category;
 		const bounds = object.geometry.boundingBox ?? object.geometry.computeBoundingBox() ?? object.geometry.boundingBox;
 		const worldBounds = bounds?.clone().applyMatrix4(object.matrixWorld);
 		report.push({ meshName: object.name, parentName: object.parent?.name ?? "", existingMaterialName: importedMaterials.map((material) => material.name || "(unnamed)").join(", "), boundingBox: worldBounds ? { min: worldBounds.min.toArray(), max: worldBounds.max.toArray() } : null, assignedVisualCategory: category });
@@ -114,10 +112,7 @@ function setInstrumentInteriorVisibility(isInterior) {
 	if (!satelliteRoot) return;
 	satelliteRoot.traverse((object) => {
 		if (!object.isMesh) return;
-		const objectPath = getObjectPath(object);
-		const hidesByName = matchesComponentName(objectPath, satelliteInteriorHideNames.map((name) => name.toLowerCase()));
-		const hidesByCategory = satelliteInteriorHideCategories.has(object.userData.nebulaVisualCategory);
-		const shouldHide = isInterior && (hidesByName || hidesByCategory);
+		const shouldHide = isInterior && matchesComponentName(getObjectPath(object), satelliteInteriorHideNames.map((name) => name.toLowerCase()));
 		if (shouldHide) { object.userData.wasHiddenByInterior = true; object.visible = false; return; }
 		if (object.userData.wasHiddenByInterior) { object.visible = true; delete object.userData.wasHiddenByInterior; }
 	});
