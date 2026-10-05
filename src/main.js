@@ -184,6 +184,7 @@ function initializeExperience() {
    if (getSatellite()) getSatellite().visible = false;
    if (getInstrument()) getInstrument().visible = false;
    parts.show(part);
+	parts.highlightAll();
    frameModelRoot(camera, controls, part, {padding:1.1});
   }
   activeView = viewName;
@@ -201,6 +202,10 @@ function initializeExperience() {
   opticsPanel.querySelector('label').hidden = viewName !== "parts";
   document.querySelector("#cad-note").hidden = viewName !== "parts";
   opticsPanel.querySelectorAll('p:not(#cad-note):not(#optical-selection)').forEach(p => p.hidden = viewName === "parts");
+		if (viewName === "parts") {
+			opticalSelection.textContent = `CAD part: ${partSelect.selectedOptions[0]?.textContent ?? "Selected part"}.`;
+			opticalSelection.hidden = false;
+		}
 
 		viewButtons.forEach((button) => {
 			button.setAttribute("aria-pressed", String(button.dataset.view === viewName));
@@ -422,7 +427,8 @@ function initializeExperience() {
  };
  const opticalSelection = document.querySelector("#optical-selection");
  function explainOptics(key) { const copy=opticalCopy[key];if(!copy)return;opticalSelection.textContent=copy[0]+": "+copy[1];opticalSelection.hidden=false; }
- document.querySelectorAll("[data-optical-component]").forEach(button => button.addEventListener("click",()=>explainOptics(button.dataset.opticalComponent)));
+ function selectOpticalComponent(key) { optics.select(key); explainOptics(key); requestRender(); }
+ document.querySelectorAll("[data-optical-component]").forEach(button => button.addEventListener("click",()=>selectOpticalComponent(button.dataset.opticalComponent)));
  partSelect.addEventListener("change", () => applyView("parts").catch(() => { selectionStatus.textContent = "CAD part could not be loaded."; }));
  playButton.addEventListener("click", () => {
   rayPlaying = !rayPlaying;
@@ -462,7 +468,7 @@ function initializeExperience() {
   if (["mirror","rays"].includes(activeView)) {
    raycaster.params.Line.threshold = .035;
    const hit=raycaster.intersectObject(optics.root,true).find(hit=>isObjectVisible(hit.object) && hit.object.userData.component);
-   if(hit)explainOptics(hit.object.userData.component);
+	if(hit)selectOpticalComponent(hit.object.userData.component);
    return;
   }
   if(["instrument","instrument-interior"].includes(activeView)) {
@@ -477,7 +483,7 @@ function initializeExperience() {
    const root=parts.getActive();
    if(!root)return;
    const hit=raycaster.intersectObject(root,true).find(hit=>isObjectVisible(hit.object));
-   if(hit){opticsPanel.hidden=false;opticsPanel.querySelectorAll('p:not(#optical-selection),label,select,.optical-components,#ray-play').forEach(element=>element.hidden=true);opticalSelection.hidden=false;opticalSelection.textContent="CAD part: "+(hit.object.name||hit.object.parent?.name||"Unnamed part")+". Name from the supplied CAD model.";}
+	if(hit){parts.highlight([hit.object]);opticsPanel.hidden=false;opticsPanel.querySelectorAll('p:not(#optical-selection),label,select,.optical-components,#ray-play').forEach(element=>element.hidden=true);opticalSelection.hidden=false;opticalSelection.textContent="CAD part: "+(hit.object.name||hit.object.parent?.name||"Unnamed part")+". Name from the supplied CAD model.";requestRender();}
    return;
   }
   if (!satellite) return;

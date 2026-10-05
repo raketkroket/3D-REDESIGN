@@ -1,11 +1,15 @@
 import * as THREE from "three";
 
 export function createSelectionHighlight(root, { ghostOpacity = 0.12 } = {}) {
+	const highlightColor = new THREE.Color(0xffaa70);
+	const ghostColor = new THREE.Color(0x607080);
 	const originals = new Map();
 	const temporaryMaterials = new Set();
 	const glowing = new Map();
 	const ghosted = new Map();
-	root.traverse(mesh => { if (mesh.isMesh) originals.set(mesh, mesh.material); });
+	root.traverse((object) => {
+		if ((object.isMesh || object.isLine) && object.material) originals.set(object, object.material);
+	});
 
 	function clear() {
 		for (const [mesh, material] of originals) mesh.material = material;
@@ -15,17 +19,20 @@ export function createSelectionHighlight(root, { ghostOpacity = 0.12 } = {}) {
 		clear();
 		const selected = new Set(meshes);
 		if (!selected.size) return;
-		for (const [mesh, source] of originals) {
-			const active = selected.has(mesh);
+		for (const [object, source] of originals) {
+			const active = selected.has(object);
 			const cache = active ? glowing : ghosted;
 			const materials = [].concat(source).map(base => {
 				if (cache.has(base)) return cache.get(base);
 				const material = base.clone();
 				if (active) {
 					material.userData.selectionHighlight = true;
-					material.emissive?.set(0xffaa70);
-					material.emissiveIntensity = 0.24;
-					material.onBeforeCompile = shader => {
+					material.color?.lerp(highlightColor, material.isLineBasicMaterial ? 0.85 : 0.28);
+					if (material.emissive) {
+						material.emissive.copy(highlightColor);
+						material.emissiveIntensity = Math.max(material.emissiveIntensity ?? 0, 0.42);
+					}
+					if (material.isMeshStandardMaterial || material.isMeshPhysicalMaterial) material.onBeforeCompile = shader => {
 						shader.uniforms.selectionColor = { value: new THREE.Color(0xffaa70) };
 						shader.fragmentShader = "uniform vec3 selectionColor;\n" + shader.fragmentShader;
 						shader.fragmentShader = shader.fragmentShader.replace(
@@ -35,9 +42,9 @@ export function createSelectionHighlight(root, { ghostOpacity = 0.12 } = {}) {
 							totalEmissiveRadiance += selectionColor * selectionRim * 0.9;`,
 						);
 					};
-					material.customProgramCacheKey = () => "nebula-selection-rim-v1";
+					if (material.isMeshStandardMaterial || material.isMeshPhysicalMaterial) material.customProgramCacheKey = () => "nebula-selection-rim-v1";
 				} else {
-					material.color?.lerp(new THREE.Color(0x607080), 0.85);
+					material.color?.lerp(ghostColor, 0.85);
 					material.metalness = 0.1;
 					material.roughness = 0.8;
 					material.transparent = true;
@@ -49,7 +56,7 @@ export function createSelectionHighlight(root, { ghostOpacity = 0.12 } = {}) {
 				temporaryMaterials.add(material);
 				return material;
 			});
-			mesh.material = Array.isArray(source) ? materials : materials[0];
+			object.material = Array.isArray(source) ? materials : materials[0];
 		}
 	}
 
