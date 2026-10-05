@@ -4,7 +4,7 @@ import TWEEN from "three/examples/jsm/libs/tween.module.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 
-const satelliteModelUrl = new URL("../../scripts/Nebula_Assembly_V2_Stowed.web.glb", import.meta.url).href;
+const satelliteModelUrl = new URL("../../scripts/Nebula_Assembly_V2_Stowed.web-lite.glb", import.meta.url).href;
 const instrumentModelUrl = new URL("../../scripts/Instrument_assembly updated FPA+OBA.glb", import.meta.url).href;
 
 let satelliteRoot = null;
