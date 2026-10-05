@@ -3,6 +3,7 @@ import * as THREE from "three";
 import TWEEN from "three/examples/jsm/libs/tween.module.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
+import { createSelectionHighlight } from "./SelectionHighlight.js";
 
 const satelliteModelUrl = new URL("../../scripts/Satellite.source-colors.glb", import.meta.url).href;
 const instrumentModelUrl = new URL("../../scripts/Instrument.source-colors.glb", import.meta.url).href;
@@ -12,9 +13,15 @@ let instrumentRoot = null;
 let instrumentLoadPromise = null;
 let currentView = "satellite";
 let satelliteMaterialMap = [];
+let satelliteHighlight = null;
 
 const componentMeshNames = {
 	xrayInstrument: [
+		"Instrument19-6_C",
+		"InstrumentHexa_B",
+		"Concentrator_Sunshields",
+		"Concentrator_Sunshades",
+		"Instrument_Electronics_Module",
 		"Instrument_(Last)",
 		"Top_Side_Panel",
 		"Upper_Side_Panel",
@@ -47,14 +54,11 @@ const componentMeshNames = {
 		"Housing_(1)",
 	],
 	starTrackerModule: [
+		"ST-16RT2-LRB",
 		"StarTracker_Mounting",
 		"StarTracker_BracketPlate_C4",
 		"StarTracker_Cap_C4",
-		"Mounting_Bracket_1",
-		"Mounting_Bracket_2",
-		"Mounting_Bracket_3",
-		"AngleBracket_30x30x50_2h",
-		"AngleBracket_30x30x74.5_3h",
+		"Mounting_Bracket_1(STBT)",
 	],
 	dawn4UCubeDrive: [
 		"PropulsionModule",
@@ -62,17 +66,10 @@ const componentMeshNames = {
 		"PropulsionModule_FuelTank_SD5_1",
 		"PropulsionModule_OxidizerTank_SD5_1",
 		"PropulsionModule_MountingPlate_SD5_1",
-		"Deployed 15in Rocketlab MLB",
 	],
-	sBandAntenna: ["S-Band_PatchAntenna_ISISpace", "S-Band_Diplexer"],
-	sunSensor: [
-		"Magnetometer_FGM-A-75_ZARM",
-		"HE_sensor_",
-		"HE sensor_",
-		"Sensor_(New)",
-		"Fe55",
-	],
-	magnetorquers: ["MagnetoTorquer_MT10-2-H", "magnet_", "magnet_step", "MagnetoTorquer"],
+	sBandAntenna: ["S-Band_PatchAntenna_ISISpace", "S-BandQuadPatchAntenna", "S-Band_Diplexer"],
+	sunSensor: ["SunSensor_Bison64"],
+	magnetorquers: ["MagnetoTorquer_MT10-2-H"],
 	solarPanel: [
 		"Solar Panels_step",
 		"Solar Panels",
@@ -100,9 +97,7 @@ const satelliteInteriorHideNames = [
 ];
 
 const meshComponents = new Map();
-const originalMaterials = new Map();
 const componentMeshes = new Map();
-const highlightedMeshes = new Set();
 
 const visualCategories = {
 	BODY_DARK: new THREE.MeshStandardMaterial({
@@ -220,11 +215,6 @@ function registerMeshComponent(object, root) {
 	}
 }
 
-function preserveBaseMaterial(object) {
-	if (!object.isMesh || !object.material) return;
-	originalMaterials.set(object, object.material);
-}
-
 function prepareModelMaterials(root, applyReferenceAppearance) {
 	const report = [];
 	const displayMaterials = new Map();
@@ -254,15 +244,14 @@ function prepareModelMaterials(root, applyReferenceAppearance) {
 			const materials = importedMaterials.map((source) => {
 				if (!displayMaterials.has(source)) {
 					const material = source.clone();
-					material.metalness = Math.min(material.metalness, 0.35);
-					material.roughness = THREE.MathUtils.clamp(material.roughness, 0.55, 0.85);
+					material.metalness = Math.min(material.metalness, 0.5);
+					material.roughness = THREE.MathUtils.clamp(material.roughness, 0.35, 0.46);
 					displayMaterials.set(source, material);
 				}
 				return displayMaterials.get(source);
 			});
 			object.material = Array.isArray(object.material) ? materials : materials[0];
 		}
-		preserveBaseMaterial(object);
 		registerMeshComponent(object, root);
 	});
 
@@ -387,6 +376,7 @@ export function loadSatellite(scene, { onLoad, onError } = {}) {
 	loadModel(satelliteModelUrl, "NebulaSatellite", false)
 		.then((satellite) => {
 			satelliteRoot = satellite;
+			satelliteHighlight = createSelectionHighlight(satelliteRoot);
 			setView("satellite");
 
 			scene.add(satelliteRoot);
@@ -506,6 +496,7 @@ export function getComponentFocus(component) {
 	let meshCount = 0;
 
 	for (const mesh of componentMeshes.get(component) ?? []) {
+		if (!mesh.visible) continue;
 		componentBox.expandByObject(mesh);
 		meshCount += 1;
 	}
@@ -519,6 +510,10 @@ export function getComponentFocus(component) {
 
 	if (direction.lengthSq() === 0) direction.set(0, 0, 1).applyQuaternion(satelliteRoot.quaternion);
 	direction.normalize();
+	// Keep a three-quarter view when focusing a face-mounted component.
+	direction.applyAxisAngle(new THREE.Vector3(0, 1, 0), 0.35);
+	direction.y = Math.max(direction.y, 0.22);
+	direction.normalize();
 
 	const componentRadius = componentBox.getSize(new THREE.Vector3()).length() / 2;
 	const satelliteRadius = satelliteBox.getSize(new THREE.Vector3()).length() / 2;
@@ -527,32 +522,7 @@ export function getComponentFocus(component) {
 }
 
 export function highlightComponent(component) {
-	for (const mesh of highlightedMeshes) {
-		const highlightedMaterial = mesh.material;
-		mesh.material = originalMaterials.get(mesh);
-		const materials = Array.isArray(highlightedMaterial) ? highlightedMaterial : [highlightedMaterial];
-		materials.forEach((material) => material.dispose());
-	}
-	highlightedMeshes.clear();
-
-	if (!component) return;
-	for (const mesh of componentMeshes.get(component) ?? []) {
-		const baseMaterial = originalMaterials.get(mesh);
-		if (!baseMaterial) continue;
-		const baseMaterials = Array.isArray(baseMaterial) ? baseMaterial : [baseMaterial];
-		const highlightedMaterials = baseMaterials.map((sourceMaterial) => {
-			const material = sourceMaterial.clone();
-			if (material.emissive) {
-				material.emissive.copy(sourceMaterial.emissive).lerp(new THREE.Color(0xe9845b), 0.24);
-				material.emissiveIntensity = Math.max(sourceMaterial.emissiveIntensity ?? 0, 0.25);
-			} else if (material.color) {
-				material.color.copy(sourceMaterial.color).lerp(new THREE.Color(0xe9845b), 0.16);
-			}
-			return material;
-		});
-		mesh.material = Array.isArray(baseMaterial) ? highlightedMaterials : highlightedMaterials[0];
-		highlightedMeshes.add(mesh);
-	}
+    satelliteHighlight?.apply(componentMeshes.get(component) ?? []);
 }
 
 export function rotateSatellite() {

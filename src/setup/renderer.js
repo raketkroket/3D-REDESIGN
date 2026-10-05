@@ -11,10 +11,11 @@ export function createRenderer() {
         const renderer = new THREE.WebGLRenderer({
             canvas,
             antialias: true,
-            alpha: true
+            alpha: true,
+            powerPreference: 'high-performance'
         });
 
-        const maximumPixelRatio = 1.25;
+        const maximumPixelRatio = 2;
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, maximumPixelRatio));
         renderer.outputColorSpace = THREE.SRGBColorSpace;
         renderer.toneMapping = THREE.ACESFilmicToneMapping;

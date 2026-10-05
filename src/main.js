@@ -61,7 +61,7 @@ function initializeExperience() {
 	const pointer = new THREE.Vector2();
 	const viewButtons = [...document.querySelectorAll("[data-view]")];
 	const controls = createControls(camera, renderer);
-	const lighting = createLights(scene);
+	const lighting = createLights(scene, renderer);
 	controls.addEventListener("start", stopCameraTween);
 	let pointerStart = null;
 	let pointerDragged = false;
@@ -80,11 +80,19 @@ function initializeExperience() {
  let lastFrameTime = null;
  let interacting = false;
  let rotationPaused = false;
+ const defaultPixelRatio = Math.min(window.devicePixelRatio, 2);
+ const interactionPixelRatio = Math.min(window.devicePixelRatio, 1.25);
  const toolbar = document.querySelector(".view-switcher");
  visualization.parentElement.append(toolbar, opticsPanel);
- controls.autoRotateSpeed = 0.15;
- controls.addEventListener("start", () => { interacting = true; });
- controls.addEventListener("end", () => { interacting = false; requestRender(); });
+ controls.autoRotateSpeed = 0.32;
+ controls.addEventListener("start", () => { interacting = true; setInteractionQuality(true); });
+ controls.addEventListener("end", () => { interacting = false; setInteractionQuality(false); });
+
+ function setInteractionQuality(isInteracting) {
+  const ratio = isInteracting ? interactionPixelRatio : defaultPixelRatio;
+  if (Math.abs(renderer.getPixelRatio() - ratio) > 0.01) renderer.setPixelRatio(ratio);
+  requestRender();
+ }
 
 
 	function requestRender() {
@@ -127,12 +135,17 @@ function initializeExperience() {
 
 		const satellite = getSatellite();
 		if (satellite) {
-			frameModelRoot(camera, controls, satellite, { padding: 1.22 });
+			frameModelRoot(camera, controls, satellite, { padding: 1.12, direction: [0.8, 0.5, 1] });
 		}
 	}
 
 	async function applyView(viewName) {
 		const request = ++viewRequest;
+		highlightComponent(null);
+		selectedComponent = null;
+		componentLinks.forEach(link => link.removeAttribute("aria-current"));
+		componentDetails.forEach(detail => { detail.hidden = true; });
+		componentDetailsPanel.classList.remove("has-selection");
 		stopCameraTween();
 		optics.hide();
 		parts.hide();
@@ -234,6 +247,15 @@ function initializeExperience() {
 		if (!["satellite", "interior"].includes(activeView)) applyView("satellite");
 
 		selectedComponent = component;
+		// Preserve the current viewer's automatic reveal of the X-ray assembly.
+		if (component === "xrayInstrument") {
+			showSatelliteInterior();
+			activeView = "interior";
+		} else if (getCurrentView() === "interior") {
+			showSatellite();
+			activeView = "satellite";
+		}
+		viewButtons.forEach(button => button.setAttribute("aria-pressed", String(button.dataset.view === activeView)));
 		highlightComponent(component);
 		const focus = getComponentFocus(component);
 		if (focus) updateCamera(controls, camera, focus, reduceMotion.matches ? 0 : 1100);
@@ -378,7 +400,10 @@ function initializeExperience() {
 	});
 
 	languageButtons.forEach((button) => {
-		button.addEventListener("click", () => setLanguage(button.dataset.language));
+		button.addEventListener("click", () => {
+			setLanguage(button.dataset.language);
+			requestRender();
+		});
 	});
 
  const rotationButton = document.querySelector("#rotation-toggle");
