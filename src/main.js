@@ -80,11 +80,11 @@ function initializeExperience() {
  let lastFrameTime = null;
  let interacting = false;
  let rotationPaused = false;
- const defaultPixelRatio = Math.min(window.devicePixelRatio, 2);
- const interactionPixelRatio = Math.min(window.devicePixelRatio, 1.25);
+ const defaultPixelRatio = Math.min(window.devicePixelRatio, 1.5);
+ const interactionPixelRatio = Math.min(window.devicePixelRatio, 0.9);
  const toolbar = document.querySelector(".view-switcher");
  visualization.parentElement.append(toolbar, opticsPanel);
- controls.autoRotateSpeed = 0.32;
+ controls.autoRotateSpeed = 0.26;
  controls.addEventListener("start", () => { interacting = true; setInteractionQuality(true); });
  controls.addEventListener("end", () => { interacting = false; setInteractionQuality(false); });
 
