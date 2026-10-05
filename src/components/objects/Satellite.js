@@ -2,8 +2,9 @@
 import * as THREE from "three";
 import TWEEN from "three/examples/jsm/libs/tween.module.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 
-const satelliteModelUrl = new URL("../../scripts/Nebula_Assembly_V2_Stowed.glb", import.meta.url).href;
+const satelliteModelUrl = new URL("../../scripts/Nebula_Assembly_V2_Stowed.web.glb", import.meta.url).href;
 const instrumentModelUrl = new URL("../../scripts/Instrument_assembly updated FPA+OBA.glb", import.meta.url).href;
 
 let satelliteRoot = null;
@@ -256,8 +257,8 @@ function prepareModelMaterials(root, applyReferenceAppearance) {
 function setInstrumentInteriorVisibility(isInterior) {
 	if (!satelliteRoot) return;
 	satelliteRoot.traverse((object) => {
-		if (!object.isMesh || !object.name) return;
-		const shouldHide = isInterior && satelliteInteriorHideNames.some((name) => object.name === name || object.name.startsWith(name) || object.name.includes(name));
+		if (!object.isMesh) return;
+		const shouldHide = isInterior && matchesComponentName(getObjectPath(object), satelliteInteriorHideNames.map((name) => name.toLowerCase()));
 		if (shouldHide) {
 			object.userData.wasHiddenByInterior = true;
 			object.visible = false;
@@ -273,6 +274,7 @@ function setInstrumentInteriorVisibility(isInterior) {
 function loadModel(url, modelName, applyReferenceAppearance = false) {
 	return new Promise((resolve, reject) => {
 		const loader = new GLTFLoader();
+		loader.setMeshoptDecoder(MeshoptDecoder);
 		loader.load(
 			url,
 			(glbData) => {
