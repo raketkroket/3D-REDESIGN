@@ -43,6 +43,11 @@
       <div class="visualization" id="visualization">
         <h2 id="model-title">Satellite model</h2>
         <canvas id="app" role="img" aria-describedby="model-description">A 3D model of the NEBULA Xplorer satellite. The component descriptions below provide the complete satellite overview.</canvas>
+        <div class="view-switcher" style="position:absolute;left:1.5rem;bottom:1.5rem;z-index:3;display:flex;gap:.5rem;flex-wrap:wrap;">
+          <button type="button" data-view="satellite" aria-pressed="true" style="padding:.5rem .75rem;border:1px solid rgba(233,132,91,.9);background:rgba(8,10,14,.8);color:#f5f2ed;cursor:pointer;">SATELLITE</button>
+          <button type="button" data-view="interior" aria-pressed="false" style="padding:.5rem .75rem;border:1px solid rgba(233,132,91,.9);background:rgba(8,10,14,.8);color:#f5f2ed;cursor:pointer;">INTERIOR</button>
+          <button type="button" data-view="instrument" aria-pressed="false" style="padding:.5rem .75rem;border:1px solid rgba(233,132,91,.9);background:rgba(8,10,14,.8);color:#f5f2ed;cursor:pointer;">INSTRUMENT</button>
+        </div>
         <div class="earth-horizon" aria-hidden="true"></div>
         <p id="model-description" class="model-instructions"><span aria-hidden="true" data-i18n-nl="Sleep om te verkennen · Scroll om in te zoomen">Drag to explore · Scroll to zoom</span><span class="visually-hidden" data-i18n-nl="Sleep om het 3D-model te draaien en scroll of knijp om in te zoomen. Gebruik de onderdeel-links als toegankelijk alternatief voor het toetsenbord.">Drag to rotate the 3D model and scroll or pinch to zoom. Use the component links for a keyboard-accessible alternative.</span></p>
       </div>

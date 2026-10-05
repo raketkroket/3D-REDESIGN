@@ -14,7 +14,11 @@ export function createRenderer() {
             alpha: true
         });
 
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        const maximumPixelRatio = window.matchMedia('(max-width: 899px)').matches ? 1.25 : 1.5;
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, maximumPixelRatio));
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.15;
 
         return renderer;
     } catch {
