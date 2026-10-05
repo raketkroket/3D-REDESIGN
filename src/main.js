@@ -49,6 +49,30 @@ function initializeExperience() {
 	const controls = createControls(camera, renderer);
 	let selectedComponent = null;
 	let activeLanguage = "en";
+	let frameRequest = null;
+	let viewerInViewport = true;
+	let viewRequest = 0;
+
+	function requestRender() {
+		if (frameRequest !== null || document.hidden || !viewerInViewport) return;
+		frameRequest = requestAnimationFrame(renderFrame);
+	}
+
+	function renderFrame(time) {
+		frameRequest = null;
+		if (document.hidden || !viewerInViewport) return;
+		TWEEN.update(time);
+		updateControls();
+		renderer.render(scene, camera);
+		if (TWEEN.getAll().some((tween) => tween.isPlaying())) requestRender();
+	}
+
+	controls.addEventListener("change", requestRender);
+	document.addEventListener("visibilitychange", requestRender);
+	new IntersectionObserver(([entry]) => {
+		viewerInViewport = entry.isIntersecting;
+		if (viewerInViewport) requestRender();
+	}).observe(visualization);
 
 	if (import.meta.env.DEV) {
 		window.__nebulaDebug = { scene, camera, controls, renderer };
@@ -70,6 +94,7 @@ function initializeExperience() {
 	}
 
 	async function applyView(viewName) {
+		const request = ++viewRequest;
 		if (viewName === "satellite") {
 			showSatellite();
 			frameCurrentModel(viewName);
@@ -78,6 +103,7 @@ function initializeExperience() {
 			frameCurrentModel(viewName);
 		} else if (viewName === "instrument") {
 			await loadInstrument(scene);
+			if (request !== viewRequest) return;
 			showInstrument();
 			frameCurrentModel(viewName);
 		}
@@ -85,6 +111,7 @@ function initializeExperience() {
 		viewButtons.forEach((button) => {
 			button.setAttribute("aria-pressed", String(button.dataset.view === viewName));
 		});
+		requestRender();
 	}
 
 	loadSatellite(scene, {
@@ -107,20 +134,13 @@ function initializeExperience() {
 		camera.aspect = width / height;
 		camera.updateProjectionMatrix();
 		renderer.setSize(width, height, false);
+		requestRender();
 	}
 
 	new ResizeObserver(resizeRenderer).observe(visualization);
 	resizeRenderer();
 
-	function animate() {
-		requestAnimationFrame(animate);
-
-		updateControls();
-		TWEEN.update();
-		renderer.render(scene, camera);
-	}
-
-	animate();
+	requestRender();
 
 	function selectComponent(component) {
 		const link = componentLinks.find((item) => item.dataset["3dObject"] === component);
@@ -140,6 +160,7 @@ function initializeExperience() {
 		setExperienceMode("explore");
 
 		updateSelectionStatus(component);
+		requestRender();
 	}
 
 	function updateSelectionStatus(component) {
@@ -173,6 +194,7 @@ function initializeExperience() {
 	}
 
 	function resetExperience() {
+		viewRequest += 1;
 		selectedComponent = null;
 		highlightComponent(null);
 		resetSatellite(reduceMotion.matches ? 0 : 1100);
@@ -183,6 +205,7 @@ function initializeExperience() {
 		componentDetailsPanel.classList.remove("has-selection");
 		setExperienceMode("explore");
 		updateSelectionStatus(null);
+		requestRender();
 	}
 
 	function activateFallback() {
