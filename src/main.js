@@ -16,6 +16,7 @@ import {
 	getComponentFocus,
 	getSelectableComponentMeshes,
 	highlightComponent,
+	revealComponent,
 	loadInstrument,
 	loadSatellite,
 	resetSatellite,
@@ -127,7 +128,7 @@ function initializeExperience() {
 
 		const satellite = getSatellite();
 		if (satellite) {
-			frameModelRoot(camera, controls, satellite, { padding: 1.22 });
+			frameModelRoot(camera, controls, satellite, { padding: 1.02 });
 		}
 	}
 
@@ -234,6 +235,7 @@ function initializeExperience() {
 		if (!["satellite", "interior"].includes(activeView)) applyView("satellite");
 
 		selectedComponent = component;
+		revealComponent(component);
 		highlightComponent(component);
 		const focus = getComponentFocus(component);
 		if (focus) updateCamera(controls, camera, focus, reduceMotion.matches ? 0 : 1100);

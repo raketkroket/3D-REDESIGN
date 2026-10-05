@@ -7,12 +7,12 @@ export function createControls(camera, renderer) {
     controls = new OrbitControls(camera, renderer.domElement);
 
     controls.enableDamping = true;
-    controls.dampingFactor = 0.055;
+    controls.dampingFactor = 0.075;
     controls.enableZoom = true;
     controls.enablePan = false;
     controls.enableRotate = true;
-    controls.rotateSpeed = 0.55;
-    controls.zoomSpeed = 0.75;
+    controls.rotateSpeed = 1.05;
+    controls.zoomSpeed = 0.9;
 
     return controls;
 }

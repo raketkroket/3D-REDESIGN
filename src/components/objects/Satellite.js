@@ -15,46 +15,14 @@ let satelliteMaterialMap = [];
 
 const componentMeshNames = {
 	xrayInstrument: [
-		"Instrument_(Last)",
-		"Top_Side_Panel",
-		"Upper_Side_Panel",
-		"Upper_Side_Panel_1",
-		"Lower_Side_Panel",
-		"Lower_Side_Panel_1",
-		"Bottom_Side_Panel",
-		"Six_OB_B",
-		"middle_rib",
-		"back_fitting",
-		"left_fitting",
-		"right_fitting",
-		"Back_OBA_rod",
-		"Back_OBA_rod_1",
-		"Front_OBA_rod",
-		"Front_OBA_rod_1",
-		"Rear_FPA_Rod",
-		"Rear_FPA_Rod_1",
-		"Science_baffle",
-		"Base_shield_plate",
-		"Collar_(New)",
-		"Sensor_(New)",
-		"Fe55",
-		"Fe55_Cover",
-		"Callibration_Tube",
-		"Head_Callibration_tube",
-		"BackplateFe55",
-		"PA210_(Preamplifier)",
-		"PA-230_(Preamplifier-Pins_connection)",
-		"Housing_(1)",
+		"Instrument19-6_C",
+		"InstrumentHexa_B",
+		"Instrument Electronics Module L1G",
 	],
 	starTrackerModule: [
 		"StarTracker_Mounting",
 		"StarTracker_BracketPlate_C4",
 		"StarTracker_Cap_C4",
-		"Mounting_Bracket_1",
-		"Mounting_Bracket_2",
-		"Mounting_Bracket_3",
-		"AngleBracket_30x30x50_2h",
-		"AngleBracket_30x30x74.5_3h",
 	],
 	dawn4UCubeDrive: [
 		"PropulsionModule",
@@ -103,6 +71,18 @@ const meshComponents = new Map();
 const originalMaterials = new Map();
 const componentMeshes = new Map();
 const highlightedMeshes = new Set();
+const selectionOutlines = new Map();
+const selectionRevealMeshes = new Set();
+const highlightColor = new THREE.Color(0xffbe4a);
+const xrayRevealPanels = [
+	"sandwich_backpanel_c4",
+	"sandwich_toppanel_c4",
+	"sandwich_top_panel_c4",
+	"sandwich_sidepanel_c4",
+	"sidepanel_c4",
+	"mirrored_sidepanel_c4",
+	"lv_adapter_panel_c4",
+];
 
 const visualCategories = {
 	BODY_DARK: new THREE.MeshStandardMaterial({
@@ -201,10 +181,8 @@ function getObjectPath(object) {
 
 function matchesComponentName(name, candidates) {
 	if (!name) return false;
-	return candidates.some((candidate) => {
-		if (!candidate) return false;
-		return name === candidate || name.startsWith(candidate) || name.includes(candidate);
-	});
+	const pathTokens = name.split(" ");
+	return candidates.some((candidate) => pathTokens.some((token) => token === candidate || token.startsWith(candidate)));
 }
 
 function registerMeshComponent(object, root) {
@@ -457,14 +435,17 @@ export function setView(viewName) {
 }
 
 export function showSatellite() {
+	revealComponent(null);
 	setView("satellite");
 }
 
 export function showSatelliteInterior() {
+	revealComponent(null);
 	setView("interior");
 }
 
 export function showInstrument() {
+	revealComponent(null);
 	setView("instrument");
 	setInstrumentPanels(false);
 }
@@ -526,6 +507,55 @@ export function getComponentFocus(component) {
 	return { componentCenter, direction, componentRadius, satelliteRadius };
 }
 
+function clearHighlightOutlines() {
+	for (const [mesh, outline] of selectionOutlines) {
+		mesh.remove(outline);
+		outline.geometry.dispose();
+		outline.material.dispose();
+	}
+	selectionOutlines.clear();
+}
+
+function addHighlightOutline(mesh) {
+	const geometry = new THREE.EdgesGeometry(mesh.geometry, 22);
+	if (geometry.getAttribute("position").count === 0) {
+		geometry.dispose();
+		return;
+	}
+	const material = new THREE.LineBasicMaterial({
+		color: highlightColor,
+		transparent: true,
+		opacity: 0.96,
+		depthTest: false,
+		depthWrite: false,
+		toneMapped: false,
+	});
+	const outline = new THREE.LineSegments(geometry, material);
+	outline.renderOrder = 10;
+	outline.scale.setScalar(1.002);
+	mesh.add(outline);
+	selectionOutlines.set(mesh, outline);
+}
+
+function restoreSelectionReveal() {
+	for (const mesh of selectionRevealMeshes) {
+		if (!mesh.userData.wasHiddenByInterior) mesh.visible = true;
+		delete mesh.userData.wasHiddenBySelection;
+	}
+	selectionRevealMeshes.clear();
+}
+
+export function revealComponent(component) {
+	restoreSelectionReveal();
+	if (component !== "xrayInstrument" || !satelliteRoot || currentView === "interior") return;
+	satelliteRoot.traverse((mesh) => {
+		if (!mesh.isMesh || !matchesComponentName(getObjectPath(mesh), xrayRevealPanels)) return;
+		mesh.userData.wasHiddenBySelection = true;
+		mesh.visible = false;
+		selectionRevealMeshes.add(mesh);
+	});
+}
+
 export function highlightComponent(component) {
 	for (const mesh of highlightedMeshes) {
 		const highlightedMaterial = mesh.material;
@@ -534,8 +564,10 @@ export function highlightComponent(component) {
 		materials.forEach((material) => material.dispose());
 	}
 	highlightedMeshes.clear();
+	clearHighlightOutlines();
 
 	if (!component) return;
+	const outlineCandidates = [];
 	for (const mesh of componentMeshes.get(component) ?? []) {
 		const baseMaterial = originalMaterials.get(mesh);
 		if (!baseMaterial) continue;
@@ -543,16 +575,24 @@ export function highlightComponent(component) {
 		const highlightedMaterials = baseMaterials.map((sourceMaterial) => {
 			const material = sourceMaterial.clone();
 			if (material.emissive) {
-				material.emissive.copy(sourceMaterial.emissive).lerp(new THREE.Color(0xe9845b), 0.24);
-				material.emissiveIntensity = Math.max(sourceMaterial.emissiveIntensity ?? 0, 0.25);
+				material.emissive.copy(sourceMaterial.emissive).lerp(highlightColor, 0.32);
+				material.emissiveIntensity = Math.max(sourceMaterial.emissiveIntensity ?? 0, 0.42);
 			} else if (material.color) {
-				material.color.copy(sourceMaterial.color).lerp(new THREE.Color(0xe9845b), 0.16);
+				material.color.copy(sourceMaterial.color).lerp(highlightColor, 0.1);
 			}
+			material.metalness = Math.min(material.metalness ?? 0, 0.72);
+			material.roughness = THREE.MathUtils.clamp(material.roughness ?? 0.55, 0.28, 0.62);
 			return material;
 		});
 		mesh.material = Array.isArray(baseMaterial) ? highlightedMaterials : highlightedMaterials[0];
 		highlightedMeshes.add(mesh);
+		mesh.geometry.computeBoundingSphere();
+		outlineCandidates.push({ mesh, radius: mesh.geometry.boundingSphere?.radius ?? 0 });
 	}
+	outlineCandidates
+		.sort((left, right) => right.radius - left.radius)
+		.slice(0, 18)
+		.forEach(({ mesh }) => addHighlightOutline(mesh));
 }
 
 export function rotateSatellite() {
