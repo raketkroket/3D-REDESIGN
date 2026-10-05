@@ -43,10 +43,10 @@
       <div class="visualization" id="visualization">
         <h2 id="model-title">Satellite model</h2>
         <canvas id="app" role="img" aria-describedby="model-description">A 3D model of the NEBULA Xplorer satellite. The component descriptions below provide the complete satellite overview.</canvas>
-        <div class="view-switcher" style="position:absolute;left:1.5rem;bottom:1.5rem;z-index:3;display:flex;gap:.5rem;flex-wrap:wrap;">
-          <button type="button" data-view="satellite" aria-pressed="true" style="padding:.5rem .75rem;border:1px solid rgba(233,132,91,.9);background:rgba(8,10,14,.8);color:#f5f2ed;cursor:pointer;">SATELLITE</button>
-          <button type="button" data-view="interior" aria-pressed="false" style="padding:.5rem .75rem;border:1px solid rgba(233,132,91,.9);background:rgba(8,10,14,.8);color:#f5f2ed;cursor:pointer;">INTERIOR</button>
-          <button type="button" data-view="instrument" aria-pressed="false" style="padding:.5rem .75rem;border:1px solid rgba(233,132,91,.9);background:rgba(8,10,14,.8);color:#f5f2ed;cursor:pointer;">INSTRUMENT</button>
+        <div class="view-switcher">
+          <button type="button" data-view="satellite" aria-pressed="true">SATELLITE</button>
+          <button type="button" data-view="interior" aria-pressed="false">INTERIOR</button>
+          <button type="button" data-view="instrument" aria-pressed="false">INSTRUMENT</button>
           <button type="button" data-view="instrument-interior" aria-pressed="false" data-i18n-nl="Instrument open">Instrument cutaway</button>
           <button type="button" data-view="mirror" aria-pressed="false">Mirror</button>
           <button type="button" data-view="rays" aria-pressed="false">X-rays</button>

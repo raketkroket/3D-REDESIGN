@@ -147,3 +147,14 @@ html.js-enhanced .earth-horizon { display: none; }
 .view-switcher button {padding:.5rem .75rem;border:1px solid rgb(185 202 219 / 65%);background:rgb(15 30 45 / 90%);color:#f5f2ed;cursor:pointer;border-radius:.25rem;}
 .view-switcher button[aria-pressed="true"] {outline:2px solid #aacfe8;outline-offset:2px;}
 .optical-overview {max-width:50rem;margin:2rem auto;padding:1rem;}
+
+/* Toolbar is a sibling of the canvas, above all model/info overlays. */
+.view-switcher {position:absolute;z-index:20;top:1rem;left:50%;bottom:auto;transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;gap:.5rem;width:max-content;max-width:calc(100% - 2rem);padding:.7rem;background:rgb(13 28 43 / 96%);border:1px solid #8ba6bd;border-radius:.6rem;pointer-events:auto;}
+.view-switcher button {min-height:44px;min-width:76px;font-size:.8rem;}
+.view-switcher button:focus-visible,.optics-panel button:focus-visible,.optics-panel select:focus-visible {outline:3px solid #c7e9ff;outline-offset:3px;}
+.optics-panel {z-index:10;top:6.5rem;pointer-events:auto;}
+.experience.optical-view ~ .intro,main:has(.optical-view) .intro {display:none!important;}
+.experience-meta {pointer-events:none;}
+@media(max-width:899px) {.view-switcher{position:relative;order:-1;top:auto;left:auto;transform:none;width:auto;max-width:none;margin:0 .75rem;} .optics-panel{top:7.5rem;} }
+
+.experience {position:relative;}

@@ -17,6 +17,6 @@ export function createControls(camera, renderer) {
     return controls;
 }
 
-export function updateControls() {
-    if (controls) controls.update();
+export function updateControls(delta) {
+    if (controls) controls.update(delta);
 }

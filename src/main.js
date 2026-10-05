@@ -64,6 +64,13 @@ function initializeExperience() {
  const partSelect = document.querySelector("#cad-part");
  const playButton = document.querySelector("#ray-play");
  let rayPlaying = false;
+ let lastFrameTime = null;
+ let interacting = false;
+ const toolbar = document.querySelector(".view-switcher");
+ visualization.parentElement.append(toolbar, opticsPanel);
+ controls.autoRotateSpeed = 0.15;
+ controls.addEventListener("start", () => { interacting = true; });
+ controls.addEventListener("end", () => { interacting = false; requestRender(); });
 
 
 	function requestRender() {
@@ -74,15 +81,18 @@ function initializeExperience() {
 	function renderFrame(time) {
 		frameRequest = null;
 		if (document.hidden || !viewerInViewport) return;
-		TWEEN.update(time);
-		updateControls();
+  const delta = lastFrameTime === null ? 0 : Math.min((time - lastFrameTime) / 1000, 0.05);
+  lastFrameTime = time;
+  TWEEN.update(time);
+  controls.autoRotate = Boolean(selectedComponent) && ["satellite", "interior"].includes(activeView) && !interacting && !reduceMotion.matches && !TWEEN.getAll().some(tween => tween.isPlaying());
+  updateControls(delta);
 		optics.update(optics.isAnimating() ? time : 0);
 		renderer.render(scene, camera);
-		if (optics.isAnimating() || TWEEN.getAll().some((tween) => tween.isPlaying())) requestRender();
+		if (controls.autoRotate || optics.isAnimating() || TWEEN.getAll().some((tween) => tween.isPlaying())) requestRender();
 	}
 
 	controls.addEventListener("change", requestRender);
-	document.addEventListener("visibilitychange", requestRender);
+	document.addEventListener("visibilitychange", () => { lastFrameTime = null; requestRender(); });
 	new IntersectionObserver(([entry]) => {
 		viewerInViewport = entry.isIntersecting;
 		if (viewerInViewport) requestRender();
@@ -168,7 +178,7 @@ function initializeExperience() {
 		onError: activateFallback,
 	});
 
-	createStars(300, scene);
+	createStars(1800, scene);
 
 	function resizeRenderer() {
 		const { width, height } = visualization.getBoundingClientRect();
