@@ -4,8 +4,8 @@ import TWEEN from "three/examples/jsm/libs/tween.module.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 
-const satelliteModelUrl = new URL("../../scripts/Nebula_Assembly_V2_Stowed.web-lite.glb", import.meta.url).href;
-const instrumentModelUrl = new URL("../../scripts/Instrument_assembly updated FPA+OBA.glb", import.meta.url).href;
+const satelliteModelUrl = new URL("../../scripts/Satellite.source-colors.glb", import.meta.url).href;
+const instrumentModelUrl = new URL("../../scripts/Instrument.source-colors.glb", import.meta.url).href;
 
 let satelliteRoot = null;
 let instrumentRoot = null;
@@ -193,7 +193,7 @@ function getObjectPath(object) {
 	const names = [];
 	let current = object;
 	while (current) {
-		if (current.name) names.push(current.name.toLowerCase());
+		if (current.name) names.push(current.name.toLowerCase().replace(/[\s:.-]+/g, "_"));
 		current = current.parent;
 	}
 	return names.join(" ");
@@ -207,14 +207,15 @@ function matchesComponentName(name, candidates) {
 	});
 }
 
-function registerMeshComponent(object) {
-	if (!object.isMesh || !object.name) return;
+function registerMeshComponent(object, root) {
+	if (!object.isMesh || root.name !== "NebulaSatellite") return;
 	const objectPath = getObjectPath(object);
 	for (const [component, names] of Object.entries(componentMeshNames)) {
-		if (matchesComponentName(objectPath, names.map((name) => name.toLowerCase()))) {
+		if (matchesComponentName(objectPath, names.map((name) => name.toLowerCase().replace(/[\s:.-]+/g, "_")))) {
 			meshComponents.set(object, component);
 			if (!componentMeshes.has(component)) componentMeshes.set(component, []);
 			componentMeshes.get(component).push(object);
+			break;
 		}
 	}
 }
@@ -248,7 +249,7 @@ function prepareModelMaterials(root, applyReferenceAppearance) {
 
 		if (category !== "OTHER") object.material = visualCategories[category];
 		preserveBaseMaterial(object);
-		registerMeshComponent(object);
+		registerMeshComponent(object, root);
 	});
 
 	return report;
@@ -258,7 +259,7 @@ function setInstrumentInteriorVisibility(isInterior) {
 	if (!satelliteRoot) return;
 	satelliteRoot.traverse((object) => {
 		if (!object.isMesh) return;
-		const shouldHide = isInterior && matchesComponentName(getObjectPath(object), satelliteInteriorHideNames.map((name) => name.toLowerCase()));
+		const shouldHide = isInterior && matchesComponentName(getObjectPath(object), satelliteInteriorHideNames.map((name) => name.toLowerCase().replace(/[\s:.-]+/g, "_")));
 		if (shouldHide) {
 			object.userData.wasHiddenByInterior = true;
 			object.visible = false;
@@ -287,6 +288,13 @@ function loadModel(url, modelName, applyReferenceAppearance = false) {
 				root.name = modelName;
 				root.visible = true;
 				const materialMap = prepareModelMaterials(root, applyReferenceAppearance);
+				// CAD parts stay fixed relative to their assembly. Visibility and
+				// materials can still change without rebuilding local matrices.
+				root.traverse((object) => {
+					if (object === root) return;
+					object.updateMatrix();
+					object.matrixAutoUpdate = false;
+				});
 				if (modelName === "NebulaSatellite") satelliteMaterialMap = materialMap;
 
 				console.log(`[${modelName}] loaded`, getModelStats(root));
@@ -350,7 +358,7 @@ export function frameModelRoot(camera, controls, object, { padding = 1.6 } = {})
 }
 
 export function loadSatellite(scene, { onLoad, onError } = {}) {
-	loadModel(satelliteModelUrl, "NebulaSatellite", true)
+	loadModel(satelliteModelUrl, "NebulaSatellite", false)
 		.then((satellite) => {
 			satelliteRoot = satellite;
 			setView("satellite");

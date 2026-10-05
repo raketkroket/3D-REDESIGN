@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-export function createScene(renderer) {
+export function createScene(onChange = () => {}) {
     const scene = new THREE.Scene();
     const loader = new THREE.TextureLoader();
 
@@ -17,6 +17,7 @@ export function createScene(renderer) {
 
         const sky = new THREE.Mesh(geometry, material);
         scene.add(sky);
+		onChange();
     });
 
     return scene;
