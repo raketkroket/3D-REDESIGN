@@ -47,11 +47,59 @@ function initializeExperience() {
 	const pointer = new THREE.Vector2();
 	const viewButtons = [...document.querySelectorAll("[data-view]")];
 	const controls = createControls(camera, renderer);
-	controls.addEventListener("start", stopCameraTween);
+	let frameRequest = null;
+	let viewerInViewport = true;
 	let pointerStart = null;
 	let pointerDragged = false;
 	let selectedComponent = null;
 	let activeLanguage = "en";
+	const defaultPixelRatio = Math.min(window.devicePixelRatio, 2);
+	const interactionPixelRatio = Math.min(window.devicePixelRatio, 1.25);
+
+	function requestRender() {
+		if (frameRequest !== null || document.hidden || !viewerInViewport) return;
+		frameRequest = requestAnimationFrame(renderFrame);
+	}
+
+	function renderFrame(time) {
+		frameRequest = null;
+		if (document.hidden || !viewerInViewport) return;
+		TWEEN.update(time);
+		updateControls();
+		renderer.render(scene, camera);
+
+		// OrbitControls damping and camera tweens need a few follow-up frames,
+		// but once the scene is stable the viewer becomes completely idle.
+		if (TWEEN.getAll().length > 0) requestRender();
+	}
+
+	function setInteractionQuality(isInteracting) {
+		const targetRatio = isInteracting ? interactionPixelRatio : defaultPixelRatio;
+		if (Math.abs(renderer.getPixelRatio() - targetRatio) > 0.01) {
+			renderer.setPixelRatio(targetRatio);
+		}
+		requestRender();
+	}
+
+	controls.addEventListener("start", () => {
+		stopCameraTween();
+		setInteractionQuality(true);
+		requestRender();
+	});
+	controls.addEventListener("change", requestRender);
+	controls.addEventListener("end", () => {
+		setInteractionQuality(false);
+		requestRender();
+	});
+
+	document.addEventListener("visibilitychange", () => {
+		if (!document.hidden) requestRender();
+	});
+
+	new IntersectionObserver(([entry]) => {
+		viewerInViewport = entry.isIntersecting;
+		if (viewerInViewport) requestRender();
+	}).observe(visualization);
 
 	if (import.meta.env.DEV) {
 		window.__nebulaDebug = { scene, camera, controls, renderer };
@@ -92,6 +140,7 @@ function initializeExperience() {
 		viewButtons.forEach((button) => {
 			button.setAttribute("aria-pressed", String(button.dataset.view === viewName));
 		});
+		requestRender();
 	}
 
 	loadSatellite(scene, {
@@ -114,20 +163,12 @@ function initializeExperience() {
 		camera.aspect = width / height;
 		camera.updateProjectionMatrix();
 		renderer.setSize(width, height, false);
+		requestRender();
 	}
 
 	new ResizeObserver(resizeRenderer).observe(visualization);
 	resizeRenderer();
-
-	function animate() {
-		requestAnimationFrame(animate);
-
-		updateControls();
-		TWEEN.update();
-		renderer.render(scene, camera);
-	}
-
-	animate();
+	requestRender();
 
 	function selectComponent(component) {
 		const link = componentLinks.find((item) => item.dataset["3dObject"] === component);
@@ -168,6 +209,7 @@ function initializeExperience() {
 		setExperienceMode("explore");
 
 		updateSelectionStatus(component);
+		requestRender();
 	}
 
 	function updateSelectionStatus(component) {
@@ -212,6 +254,7 @@ function initializeExperience() {
 		componentDetailsPanel.classList.remove("has-selection");
 		setExperienceMode("explore");
 		updateSelectionStatus(null);
+		requestRender();
 	}
 
 	function activateFallback() {
@@ -250,7 +293,10 @@ function initializeExperience() {
 	});
 
 	languageButtons.forEach((button) => {
-		button.addEventListener("click", () => setLanguage(button.dataset.language));
+		button.addEventListener("click", () => {
+			setLanguage(button.dataset.language);
+			requestRender();
+		});
 	});
 
 	canvas.addEventListener("pointerdown", (event) => {
