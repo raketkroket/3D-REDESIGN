@@ -11,7 +11,8 @@ export function createRenderer() {
         const renderer = new THREE.WebGLRenderer({
             canvas,
             antialias: true,
-            alpha: true
+            alpha: true,
+            powerPreference: 'high-performance'
         });
 
         const maximumPixelRatio = window.matchMedia('(max-width: 899px)').matches ? 1.3 : 1.6;

@@ -32,40 +32,15 @@ const componentMeshNames = {
 		"PropulsionModule_MountingPlate_SD5_1",
 		"Deployed 15in Rocketlab MLB",
 	],
+	dawn4UCubeDrive: ["PropulsionModule", "PropulsionModule_Box_SD5_1", "PropulsionModule_FuelTank_SD5_1", "PropulsionModule_OxidizerTank_SD5_1", "PropulsionModule_MountingPlate_SD5_1", "Deployed 15in Rocketlab MLB"],
 	sBandAntenna: ["S-Band_PatchAntenna_ISISpace", "S-Band_Diplexer"],
-	sunSensor: [
-		"Magnetometer_FGM-A-75_ZARM",
-		"HE_sensor_",
-		"HE sensor_",
-		"Sensor_(New)",
-		"Fe55",
-	],
+	sunSensor: ["Magnetometer_FGM-A-75_ZARM", "HE_sensor_", "HE sensor_", "Sensor_(New)", "Fe55"],
 	magnetorquers: ["MagnetoTorquer_MT10-2-H", "magnet_", "magnet_step", "MagnetoTorquer"],
-	solarPanel: [
-		"Solar Panels_step",
-		"Solar Panels",
-		"Deployed 910x570 Sparkwing",
-		"SARA_",
-		"SARA_Mounting_SolarArray",
-		"SARA-v02.01.00.001_CASING_REV00_stp_1",
-	],
+	solarPanel: ["Solar Panels_step", "Solar Panels", "Deployed 910x570 Sparkwing", "SARA_", "SARA_Mounting_SolarArray", "SARA-v02.01.00.001_CASING_REV00_stp_1"],
 };
 
-const satelliteInteriorHideNames = [
-	"Top_Side_Panel",
-	"Upper_Side_Panel",
-	"Lower_Side_Panel",
-	"Bottom_Side_Panel",
-	"Solar Panels_step",
-	"Solar Panels",
-	"Deployed 910x570 Sparkwing",
-	"SARA_",
-	"SARA_Mounting_SolarArray",
-	"SARA-v02.01.00.001_CASING_REV00_stp_1",
-	"Side_Panel",
-	"side_panel",
-	"Panel",
-];
+const satelliteInteriorHideNames = ["Top_Side_Panel", "Upper_Side_Panel", "Lower_Side_Panel", "Bottom_Side_Panel", "Solar Panels_step", "Solar Panels", "Deployed 910x570 Sparkwing", "SARA_", "SARA_Mounting_SolarArray", "SARA-v02.01.00.001_CASING_REV00_stp_1", "Side_Panel", "side_panel", "Panel", "Cover", "Outer_Panel", "Exterior"];
+const satelliteInteriorHideCategories = new Set(["BODY_DARK", "SOLAR_CELL_BLUE", "SOLAR_FRAME_METAL"]);
 
 const meshComponents = new Map();
 const originalMaterials = new Map();
@@ -85,78 +60,16 @@ const xrayRevealPanels = [
 ];
 
 const visualCategories = {
-	BODY_DARK: new THREE.MeshStandardMaterial({
-		name: "Nebula Xplorer Base / BODY_DARK",
-		color: 0x404348,
-		metalness: 0.2824,
-		roughness: 0.3872727155685425,
-		side: THREE.DoubleSide,
-	}),
-	SOLAR_CELL_BLUE: new THREE.MeshStandardMaterial({
-		name: "Nebula Xplorer Solar Panel / SOLAR_CELL_BLUE",
-		color: 0x174172,
-		emissive: 0x174172,
-		emissiveIntensity: 0.3,
-		metalness: 0.4471,
-		roughness: 0.307272732257843,
-		side: THREE.DoubleSide,
-	}),
-	SOLAR_FRAME_METAL: new THREE.MeshStandardMaterial({
-		name: "Nebula Xplorer Solar Panel / SOLAR_FRAME_METAL",
-		color: 0x404348,
-		metalness: 0.2824,
-		roughness: 0.307272732257843,
-		side: THREE.DoubleSide,
-	}),
-	STRUCTURE_ALUMINIUM: new THREE.MeshStandardMaterial({
-		name: "Nebula Xplorer Base / STRUCTURE_ALUMINIUM",
-		color: 0xcacaca,
-		metalness: 0.7921,
-		roughness: 0.3872727155685425,
-		side: THREE.DoubleSide,
-	}),
-	INSTRUMENT_METAL: new THREE.MeshStandardMaterial({
-		name: "Nebula Xplorer Base / INSTRUMENT_METAL",
-		color: 0xcacaca,
-		metalness: 0.7921,
-		roughness: 0.3872727155685425,
-		side: THREE.DoubleSide,
-	}),
-	GOLD_EDGE: new THREE.MeshStandardMaterial({
-		name: "Nebula Xplorer Base / GOLD_EDGE",
-		color: 0x918d47,
-		metalness: 0.2745,
-		roughness: 0.3872727155685425,
-		side: THREE.DoubleSide,
-	}),
-	SENSOR: new THREE.MeshStandardMaterial({
-		name: "Nebula Xplorer Base / SENSOR",
-		color: 0xa5a5a5,
-		metalness: 0.6476,
-		roughness: 0.3872727155685425,
-		side: THREE.DoubleSide,
-	}),
+	BODY_DARK: new THREE.MeshStandardMaterial({ name: "Nebula Xplorer Base / BODY_DARK", color: 0x343940, metalness: 0.38, roughness: 0.3, side: THREE.DoubleSide }),
+	SOLAR_CELL_BLUE: new THREE.MeshStandardMaterial({ name: "Nebula Xplorer Solar Panel / SOLAR_CELL_BLUE", color: 0x123e78, emissive: 0x071b34, emissiveIntensity: 0.24, metalness: 0.55, roughness: 0.22, side: THREE.DoubleSide }),
+	SOLAR_FRAME_METAL: new THREE.MeshStandardMaterial({ name: "Nebula Xplorer Solar Panel / SOLAR_FRAME_METAL", color: 0x454b52, metalness: 0.62, roughness: 0.25, side: THREE.DoubleSide }),
+	STRUCTURE_ALUMINIUM: new THREE.MeshStandardMaterial({ name: "Nebula Xplorer Base / STRUCTURE_ALUMINIUM", color: 0xd6d8db, metalness: 0.82, roughness: 0.24, side: THREE.DoubleSide }),
+	INSTRUMENT_METAL: new THREE.MeshStandardMaterial({ name: "Nebula Xplorer Base / INSTRUMENT_METAL", color: 0xbfc4ca, metalness: 0.76, roughness: 0.27, side: THREE.DoubleSide }),
+	GOLD_EDGE: new THREE.MeshStandardMaterial({ name: "Nebula Xplorer Base / GOLD_EDGE", color: 0xa69b4d, metalness: 0.58, roughness: 0.25, side: THREE.DoubleSide }),
+	SENSOR: new THREE.MeshStandardMaterial({ name: "Nebula Xplorer Base / SENSOR", color: 0xb5bbc2, metalness: 0.68, roughness: 0.23, side: THREE.DoubleSide }),
 };
 
-const bodyMeshNames = new Set([
-	"sidepanel_c4",
-	"mirrored_sidepanel_c4",
-	"lv_adapter_panel_c4",
-	"part104",
-	"part264",
-	"part266",
-	"part268",
-	"part272",
-	"part272_1",
-	"p2",
-	"p2_1",
-	"p3",
-	"p3_1",
-	"p6",
-	"p12",
-	"six_ob_b",
-	"concentrator_sunshades_step",
-]);
+const bodyMeshNames = new Set(["sidepanel_c4", "mirrored_sidepanel_c4", "lv_adapter_panel_c4", "part104", "part264", "part266", "part268", "part272", "part272_1", "p2", "p2_1", "p3", "p3_1", "p6", "p12", "six_ob_b", "concentrator_sunshades_step"]);
 
 function getVisualCategory(object) {
 	const name = object.parent?.name?.toLowerCase() ?? "";
@@ -198,34 +111,20 @@ function registerMeshComponent(object, root) {
 	}
 }
 
-function preserveBaseMaterial(object) {
-	if (!object.isMesh || !object.material) return;
-	originalMaterials.set(object, object.material);
-}
+function preserveBaseMaterial(object) { if (object.isMesh && object.material) originalMaterials.set(object, object.material); }
 
 function prepareModelMaterials(root, applyReferenceAppearance) {
 	const report = [];
 	const displayMaterials = new Map();
 	root.updateWorldMatrix(true, true);
-
 	root.traverse((object) => {
 		if (!object.isMesh || !object.material) return;
 		const importedMaterials = Array.isArray(object.material) ? object.material : [object.material];
 		const category = applyReferenceAppearance ? getVisualCategory(object) : "OTHER";
+		object.userData.nebulaVisualCategory = category;
 		const bounds = object.geometry.boundingBox ?? object.geometry.computeBoundingBox() ?? object.geometry.boundingBox;
 		const worldBounds = bounds?.clone().applyMatrix4(object.matrixWorld);
-
-		report.push({
-			meshName: object.name,
-			parentName: object.parent?.name ?? "",
-			existingMaterialName: importedMaterials.map((material) => material.name || "(unnamed)").join(", "),
-			boundingBox: worldBounds ? {
-				min: worldBounds.min.toArray(),
-				max: worldBounds.max.toArray(),
-			} : null,
-			assignedVisualCategory: category,
-		});
-
+		report.push({ meshName: object.name, parentName: object.parent?.name ?? "", existingMaterialName: importedMaterials.map((material) => material.name || "(unnamed)").join(", "), boundingBox: worldBounds ? { min: worldBounds.min.toArray(), max: worldBounds.max.toArray() } : null, assignedVisualCategory: category });
 		if (category !== "OTHER") object.material = visualCategories[category];
 		else {
 			// Keep STEP base colors, but soften its all-metal export defaults.
@@ -243,7 +142,6 @@ function prepareModelMaterials(root, applyReferenceAppearance) {
 		preserveBaseMaterial(object);
 		registerMeshComponent(object, root);
 	});
-
 	return report;
 }
 
@@ -251,7 +149,10 @@ function setInstrumentInteriorVisibility(isInterior) {
 	if (!satelliteRoot) return;
 	satelliteRoot.traverse((object) => {
 		if (!object.isMesh) return;
-		const shouldHide = isInterior && matchesComponentName(getObjectPath(object), satelliteInteriorHideNames.map((name) => name.toLowerCase().replace(/[\s:.-]+/g, "_")));
+		const objectPath = getObjectPath(object);
+		const hidesByName = matchesComponentName(objectPath, satelliteInteriorHideNames.map((name) => name.toLowerCase().replace(/[\s:.-]+/g, "_")));
+		const hidesByCategory = satelliteInteriorHideCategories.has(object.userData.nebulaVisualCategory);
+		const shouldHide = isInterior && (hidesByName || hidesByCategory);
 		if (shouldHide) {
 			object.userData.wasHiddenByInterior = true;
 			object.visible = false;
@@ -308,20 +209,12 @@ export function getModelStats(object) {
 	const size = box.getSize(new THREE.Vector3());
 	const center = box.getCenter(new THREE.Vector3());
 	const radius = box.getBoundingSphere(new THREE.Sphere()).radius;
-	return {
-		box,
-		center,
-		size,
-		radius,
-		maxDimension: Math.max(size.x, size.y, size.z),
-	};
+	return { box, center, size, radius, maxDimension: Math.max(size.x, size.y, size.z) };
 }
 
 export function frameModelRoot(camera, controls, object, { padding = 1.6, direction } = {}) {
 	if (!object || !camera || !controls) return null;
-	const stats = getModelStats(object);
-	if (!stats) return null;
-
+	const stats = getModelStats(object); if (!stats) return null;
 	const verticalFov = THREE.MathUtils.degToRad(camera.fov);
 	const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * camera.aspect);
 	const limitingFov = Math.min(verticalFov, horizontalFov);
@@ -381,56 +274,20 @@ export function loadSatellite(scene, { onLoad, onError } = {}) {
 export function loadInstrument(scene) {
 	if (instrumentRoot) return Promise.resolve(instrumentRoot);
 	if (instrumentLoadPromise) return instrumentLoadPromise;
-
-	instrumentLoadPromise = loadModel(instrumentModelUrl, "InstrumentAssembly")
-		.then((instrument) => {
-			instrumentRoot = instrument;
-			instrumentRoot.visible = false;
-			scene.add(instrumentRoot);
-			return instrumentRoot;
-		})
-		.catch((error) => {
-			instrumentLoadPromise = null;
-			throw error;
-		});
-
+	instrumentLoadPromise = loadModel(instrumentModelUrl, "InstrumentAssembly").then((instrument) => { instrumentRoot = instrument; instrumentRoot.visible = false; scene.add(instrumentRoot); return instrumentRoot; }).catch((error) => { instrumentLoadPromise = null; throw error; });
 	return instrumentLoadPromise;
 }
 
-export function getSatellite() {
-	return satelliteRoot;
-}
-
-export function getInstrument() {
-	return instrumentRoot;
-}
-
-export function getSatelliteMaterialMap() {
-	return satelliteMaterialMap;
-}
-
-export function getCurrentView() {
-	return currentView;
-}
+export function getSatellite() { return satelliteRoot; }
+export function getInstrument() { return instrumentRoot; }
+export function getSatelliteMaterialMap() { return satelliteMaterialMap; }
+export function getCurrentView() { return currentView; }
 
 export function setView(viewName) {
 	const nextView = viewName === "interior" ? "interior" : viewName === "instrument" ? "instrument" : "satellite";
 	currentView = nextView;
-
-	if (satelliteRoot) {
-		satelliteRoot.visible = nextView !== "instrument";
-		if (nextView === "interior") {
-			setInstrumentInteriorVisibility(true);
-		} else {
-			setInstrumentInteriorVisibility(false);
-		}
-	}
-
-	if (instrumentRoot) {
-		instrumentRoot.visible = nextView === "instrument";
-	}
-
-	console.log("[view]", nextView);
+	if (satelliteRoot) { satelliteRoot.visible = nextView !== "instrument"; setInstrumentInteriorVisibility(nextView === "interior"); }
+	if (instrumentRoot) instrumentRoot.visible = nextView === "instrument";
 	return nextView;
 }
 
@@ -467,43 +324,26 @@ export function showInstrumentInterior() {
 
 export function getComponentFromObject(object) {
 	let current = object;
-	while (current) {
-		const component = meshComponents.get(current);
-		if (component) return component;
-		current = current.parent;
-	}
+	while (current) { const component = meshComponents.get(current); if (component) return component; current = current.parent; }
 	return null;
 }
 
-export function getSelectableComponentMeshes() {
-	return [...meshComponents.keys()];
-}
+export function getSelectableComponentMeshes() { return [...meshComponents.keys()]; }
 
 export function getComponentFocus(component) {
 	if (!satelliteRoot) return null;
-
 	satelliteRoot.updateWorldMatrix(true, true);
-	const componentBox = new THREE.Box3().makeEmpty();
-	let meshCount = 0;
-
-	for (const mesh of componentMeshes.get(component) ?? []) {
-		componentBox.expandByObject(mesh);
-		meshCount += 1;
-	}
-
+	const componentBox = new THREE.Box3().makeEmpty(); let meshCount = 0;
+	for (const mesh of componentMeshes.get(component) ?? []) { if (!mesh.visible) continue; componentBox.expandByObject(mesh); meshCount += 1; }
 	if (meshCount === 0 || componentBox.isEmpty()) return null;
-
 	const satelliteBox = new THREE.Box3().setFromObject(satelliteRoot);
 	const componentCenter = componentBox.getCenter(new THREE.Vector3());
 	const satelliteCenter = satelliteBox.getCenter(new THREE.Vector3());
 	const direction = componentCenter.clone().sub(satelliteCenter);
-
 	if (direction.lengthSq() === 0) direction.set(0, 0, 1).applyQuaternion(satelliteRoot.quaternion);
 	direction.normalize();
-
 	const componentRadius = componentBox.getSize(new THREE.Vector3()).length() / 2;
 	const satelliteRadius = satelliteBox.getSize(new THREE.Vector3()).length() / 2;
-
 	return { componentCenter, direction, componentRadius, satelliteRadius };
 }
 
@@ -558,10 +398,8 @@ export function revealComponent(component) {
 
 export function highlightComponent(component) {
 	for (const mesh of highlightedMeshes) {
-		const highlightedMaterial = mesh.material;
-		mesh.material = originalMaterials.get(mesh);
-		const materials = Array.isArray(highlightedMaterial) ? highlightedMaterial : [highlightedMaterial];
-		materials.forEach((material) => material.dispose());
+		const highlightedMaterial = mesh.material; mesh.material = originalMaterials.get(mesh);
+		(Array.isArray(highlightedMaterial) ? highlightedMaterial : [highlightedMaterial]).forEach((material) => material.dispose());
 	}
 	highlightedMeshes.clear();
 	clearHighlightOutlines();
@@ -569,8 +407,8 @@ export function highlightComponent(component) {
 	if (!component) return;
 	const outlineCandidates = [];
 	for (const mesh of componentMeshes.get(component) ?? []) {
-		const baseMaterial = originalMaterials.get(mesh);
-		if (!baseMaterial) continue;
+		if (!mesh.visible) continue;
+		const baseMaterial = originalMaterials.get(mesh); if (!baseMaterial) continue;
 		const baseMaterials = Array.isArray(baseMaterial) ? baseMaterial : [baseMaterial];
 		const highlightedMaterials = baseMaterials.map((sourceMaterial) => {
 			const material = sourceMaterial.clone();
@@ -596,46 +434,14 @@ export function highlightComponent(component) {
 }
 
 export function rotateSatellite() {
-	if (satelliteRoot && currentView !== "instrument") {
-		satelliteRoot.rotation.y += 0.001;
-		satelliteRoot.rotation.x += 0.0005;
-		satelliteRoot.rotation.z += 0.0003;
-	}
-	if (instrumentRoot && currentView === "instrument") {
-		instrumentRoot.rotation.y += 0.001;
-		instrumentRoot.rotation.x += 0.0005;
-	}
+	if (satelliteRoot && currentView !== "instrument") { satelliteRoot.rotation.y += 0.0018; satelliteRoot.rotation.x += 0.00075; satelliteRoot.rotation.z += 0.0004; }
+	if (instrumentRoot && currentView === "instrument") { instrumentRoot.rotation.y += 0.0018; instrumentRoot.rotation.x += 0.00075; }
 }
 
 export function resetSatellite(duration = 1500) {
-	if (satelliteRoot) {
-		const startSatelliteRotation = {
-			x: satelliteRoot.rotation.x,
-			y: satelliteRoot.rotation.y,
-			z: satelliteRoot.rotation.z,
-		};
-
-		const endSatelliteRotation = {
-			x: 0.698,
-			y: -0.611,
-			z: -0.175,
-		};
-
-		if (duration === 0) {
-			satelliteRoot.rotation.set(endSatelliteRotation.x, endSatelliteRotation.y, endSatelliteRotation.z);
-			return;
-		}
-
-		new TWEEN.Tween(startSatelliteRotation)
-			.to(endSatelliteRotation, duration)
-			.easing(TWEEN.Easing.Quadratic.InOut)
-			.onUpdate(() => {
-				satelliteRoot.rotation.set(
-					startSatelliteRotation.x,
-					startSatelliteRotation.y,
-					startSatelliteRotation.z,
-				);
-			})
-			.start();
-	}
+	if (!satelliteRoot) return;
+	const startSatelliteRotation = { x: satelliteRoot.rotation.x, y: satelliteRoot.rotation.y, z: satelliteRoot.rotation.z };
+	const endSatelliteRotation = { x: 0.698, y: -0.611, z: -0.175 };
+	if (duration === 0) { satelliteRoot.rotation.set(endSatelliteRotation.x, endSatelliteRotation.y, endSatelliteRotation.z); return; }
+	new TWEEN.Tween(startSatelliteRotation).to(endSatelliteRotation, duration).easing(TWEEN.Easing.Quadratic.InOut).onUpdate(() => { satelliteRoot.rotation.set(startSatelliteRotation.x, startSatelliteRotation.y, startSatelliteRotation.z); }).start();
 }
