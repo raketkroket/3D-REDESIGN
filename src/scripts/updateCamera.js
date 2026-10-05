@@ -54,11 +54,20 @@ export function updateCamera(controls, camera, focus, duration = 1100) {
 		minimumDistance,
 		maximumDistance,
 	);
-	const distance = THREE.MathUtils.clamp(
+	let distance = THREE.MathUtils.clamp(
 		THREE.MathUtils.lerp(currentDistance, componentDistance, 0.35),
 		minimumDistance,
 		maximumDistance,
 	);
+	if (focus.detailView) {
+		const verticalFov = THREE.MathUtils.degToRad(camera.fov);
+		const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * camera.aspect);
+		distance = focus.componentRadius / Math.sin(Math.min(verticalFov, horizontalFov) / 2) * 2.5;
+		controls.minDistance = distance * 0.65;
+		controls.maxDistance = maximumDistance;
+	} else {
+		controls.minDistance = focus.satelliteRadius * 0.75;
+	}
 	const orbitQuaternion = new THREE.Quaternion();
 	const orbitDirection = new THREE.Vector3();
 	const target = new THREE.Vector3();
