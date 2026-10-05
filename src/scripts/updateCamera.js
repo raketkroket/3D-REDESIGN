@@ -3,8 +3,13 @@ import * as THREE from "three";
 
 let cameraTween;
 
-export function resetCamera(controls, camera, duration = 1100) {
+export function stopCameraTween() {
 	cameraTween?.stop();
+	cameraTween = undefined;
+}
+
+export function resetCamera(controls, camera, duration = 1100) {
+	stopCameraTween();
 	const startPosition = camera.position.clone();
 	const startTarget = controls.target.clone();
 	const overviewPosition = new THREE.Vector3(0, 0, 5);
@@ -32,7 +37,7 @@ export function resetCamera(controls, camera, duration = 1100) {
 }
 
 export function updateCamera(controls, camera, focus, duration = 1100) {
-	cameraTween?.stop();
+	stopCameraTween();
 	camera.up.set(0, 1, 0);
 
 	const startTarget = controls.target.clone();

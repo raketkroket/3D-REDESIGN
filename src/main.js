@@ -23,7 +23,7 @@ import {
 	getCurrentView,
 } from "./components/objects/Satellite.js";
 import { createStars } from "./components/objects/star.js";
-import { updateCamera } from "./scripts/updateCamera.js";
+import { stopCameraTween, updateCamera } from "./scripts/updateCamera.js";
 
 function initializeExperience() {
 	const visualization = document.querySelector(".visualization");
@@ -47,6 +47,9 @@ function initializeExperience() {
 	const pointer = new THREE.Vector2();
 	const viewButtons = [...document.querySelectorAll("[data-view]")];
 	const controls = createControls(camera, renderer);
+	controls.addEventListener("start", stopCameraTween);
+	let pointerStart = null;
+	let pointerDragged = false;
 	let selectedComponent = null;
 	let activeLanguage = "en";
 
@@ -223,7 +226,27 @@ function initializeExperience() {
 		button.addEventListener("click", () => setLanguage(button.dataset.language));
 	});
 
+	canvas.addEventListener("pointerdown", (event) => {
+		pointerStart = { x: event.clientX, y: event.clientY };
+		pointerDragged = false;
+	});
+
+	canvas.addEventListener("pointermove", (event) => {
+		if (!pointerStart) return;
+		pointerDragged ||= Math.hypot(event.clientX - pointerStart.x, event.clientY - pointerStart.y) > 6;
+	});
+
+	canvas.addEventListener("pointercancel", () => {
+		pointerStart = null;
+		pointerDragged = false;
+	});
+
 	canvas.addEventListener("click", (event) => {
+		const shouldSelect = !pointerDragged;
+		pointerStart = null;
+		pointerDragged = false;
+		if (!shouldSelect) return;
+
 		const satellite = getSatellite();
 		if (!satellite || getCurrentView() !== "satellite") return;
 		const bounds = canvas.getBoundingClientRect();

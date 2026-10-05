@@ -14,7 +14,7 @@ export function createRenderer() {
             alpha: true
         });
 
-        const maximumPixelRatio = window.matchMedia('(max-width: 899px)').matches ? 1.25 : 1.5;
+        const maximumPixelRatio = 1.25;
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, maximumPixelRatio));
         renderer.outputColorSpace = THREE.SRGBColorSpace;
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
