@@ -27,6 +27,11 @@ import {
 import { createStars } from "./components/objects/star.js";
 import { stopCameraTween, updateCamera } from "./scripts/updateCamera.js";
 
+function isObjectVisible(object) {
+ for (let current = object; current; current = current.parent) if (!current.visible) return false;
+ return true;
+}
+
 function initializeExperience() {
 	const visualization = document.querySelector(".visualization");
 	const renderer = createRenderer();
@@ -66,6 +71,7 @@ function initializeExperience() {
  let rayPlaying = false;
  let lastFrameTime = null;
  let interacting = false;
+ let rotationPaused = false;
  const toolbar = document.querySelector(".view-switcher");
  visualization.parentElement.append(toolbar, opticsPanel);
  controls.autoRotateSpeed = 0.15;
@@ -84,7 +90,7 @@ function initializeExperience() {
   const delta = lastFrameTime === null ? 0 : Math.min((time - lastFrameTime) / 1000, 0.05);
   lastFrameTime = time;
   TWEEN.update(time);
-  controls.autoRotate = Boolean(selectedComponent) && ["satellite", "interior"].includes(activeView) && !interacting && !reduceMotion.matches && !TWEEN.getAll().some(tween => tween.isPlaying());
+  controls.autoRotate = !rotationPaused && !interacting && !reduceMotion.matches && !TWEEN.getAll().some(tween => tween.isPlaying());
   updateControls(delta);
 		optics.update(optics.isAnimating() ? time : 0);
 		renderer.render(scene, camera);
@@ -141,6 +147,9 @@ function initializeExperience() {
    if (getSatellite()) getSatellite().visible = false;
    if (getInstrument()) getInstrument().visible = false;
    optics.show(viewName === "rays");
+   rayPlaying = viewName === "rays" && !reduceMotion.matches;
+   optics.setPlaying(rayPlaying);
+   playButton.setAttribute("aria-pressed", String(rayPlaying));
    frameModelRoot(camera, controls, optics.root, {padding:1.1});
   } else if (viewName === "parts") {
    const part = await parts.load(partSelect.value);
@@ -151,6 +160,8 @@ function initializeExperience() {
    frameModelRoot(camera, controls, part, {padding:1.1});
   }
   activeView = viewName;
+  opticalSelection.hidden = true;
+  opticsPanel.querySelector('.optical-components').hidden = !["mirror","rays"].includes(viewName);
   const optical = ["mirror", "rays", "parts"].includes(viewName);
   opticsPanel.hidden = !optical;
   document.querySelector(".experience").classList.toggle("optical-view", optical);
@@ -158,7 +169,7 @@ function initializeExperience() {
   partSelect.hidden = viewName !== "parts";
   opticsPanel.querySelector('label').hidden = viewName !== "parts";
   document.querySelector("#cad-note").hidden = viewName !== "parts";
-  opticsPanel.querySelectorAll('p:not(#cad-note)').forEach(p => p.hidden = viewName === "parts");
+  opticsPanel.querySelectorAll('p:not(#cad-note):not(#optical-selection)').forEach(p => p.hidden = viewName === "parts");
 
 		viewButtons.forEach((button) => {
 			button.setAttribute("aria-pressed", String(button.dataset.view === viewName));
@@ -311,6 +322,18 @@ function initializeExperience() {
 		button.addEventListener("click", () => setLanguage(button.dataset.language));
 	});
 
+ const rotationButton = document.querySelector("#rotation-toggle");
+ rotationButton.addEventListener("click", () => { rotationPaused = !rotationPaused;rotationButton.setAttribute("aria-pressed",String(rotationPaused));rotationButton.textContent = rotationPaused ? "Resume rotation" : "Pause rotation";requestRender(); });
+ const opticalCopy = {
+ primary: ["Primary mirror", "The first shallow-angle reflection redirects incoming X-rays toward the secondary mirror."],
+ secondary: ["Secondary mirror", "The second reflection directs the X-rays toward the focal point on the detector."],
+ detector: ["Detector", "At the focal point the detector records the arriving X-rays."],
+ tube: ["Stray-light tube", "This tube helps block light entering from the side before the X-rays reach the detector."],
+ rays: ["X-ray path", "Yellow lines explain the radiation path: incoming rays, first reflection, second reflection, detector. This is a schematic, not visible light."]
+ };
+ const opticalSelection = document.querySelector("#optical-selection");
+ function explainOptics(key) { const copy=opticalCopy[key];if(!copy)return;opticalSelection.textContent=copy[0]+": "+copy[1];opticalSelection.hidden=false; }
+ document.querySelectorAll("[data-optical-component]").forEach(button => button.addEventListener("click",()=>explainOptics(button.dataset.opticalComponent)));
  partSelect.addEventListener("change", () => applyView("parts").catch(() => { selectionStatus.textContent = "CAD part could not be loaded."; }));
  playButton.addEventListener("click", () => {
   rayPlaying = !rayPlaying;
@@ -342,12 +365,26 @@ function initializeExperience() {
 		if (!shouldSelect) return;
 
 		const satellite = getSatellite();
-		if (!satellite || activeView !== "satellite") return;
+
 		const bounds = canvas.getBoundingClientRect();
 		pointer.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
 		pointer.y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
 		raycaster.setFromCamera(pointer, camera);
-		const hit = raycaster.intersectObjects(getSelectableComponentMeshes(), false)[0];
+  if (["mirror","rays"].includes(activeView)) {
+   raycaster.params.Line.threshold = .035;
+   const hit=raycaster.intersectObject(optics.root,true).find(hit=>isObjectVisible(hit.object) && hit.object.userData.component);
+   if(hit)explainOptics(hit.object.userData.component);
+   return;
+  }
+  if(["instrument","instrument-interior","parts"].includes(activeView)) {
+   const root=activeView==="parts"?parts.getActive():getInstrument();
+   if(!root)return;
+   const hit=raycaster.intersectObject(root,true).find(hit=>isObjectVisible(hit.object));
+   if(hit){opticsPanel.hidden=false;opticsPanel.querySelectorAll('p:not(#optical-selection),label,select,.optical-components,#ray-play').forEach(element=>element.hidden=true);opticalSelection.hidden=false;opticalSelection.textContent="CAD part: "+(hit.object.name||hit.object.parent?.name||"Unnamed part")+". Name from the supplied CAD model.";}
+   return;
+  }
+  if (!satellite) return;
+		const hit = raycaster.intersectObjects(getSelectableComponentMeshes(), false).find(hit => isObjectVisible(hit.object));
 		const component = hit && getComponentFromObject(hit.object);
 		if (component) selectComponent(component);
 	});

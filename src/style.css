@@ -158,3 +158,12 @@ html.js-enhanced .earth-horizon { display: none; }
 @media(max-width:899px) {.view-switcher{position:relative;order:-1;top:auto;left:auto;transform:none;width:auto;max-width:none;margin:0 .75rem;} .optics-panel{top:7.5rem;} }
 
 .experience {position:relative;}
+
+.view-switcher {gap:.2rem;padding:.35rem;border:0;border-radius:2rem;background:rgb(10 20 30 / 92%);box-shadow:0 4px 20px rgb(0 0 0 / 15%);}
+.view-switcher button {border:0!important;background:transparent!important;border-radius:1.5rem;padding:.65rem .85rem;min-width:0;font-weight:500;}
+.view-switcher button[aria-pressed="true"] {outline:0;background:#e8eef2!important;color:#17212b;}
+.view-switcher #rotation-toggle {border-left:1px solid #536271!important;border-radius:0;color:#bac7d2;}
+.optics-panel {background:rgb(14 25 35 / 92%);border:0;border-radius:.6rem;}
+.optical-components {display:flex;flex-wrap:wrap;gap:.35rem;margin:.7rem 0;}
+.optical-components button {font-size:.72rem;}
+@media(max-width:899px){.view-switcher{border-radius:.75rem;} }

@@ -44,21 +44,24 @@
         <h2 id="model-title">Satellite model</h2>
         <canvas id="app" role="img" aria-describedby="model-description">A 3D model of the NEBULA Xplorer satellite. The component descriptions below provide the complete satellite overview.</canvas>
         <div class="view-switcher">
-          <button type="button" data-view="satellite" aria-pressed="true">SATELLITE</button>
-          <button type="button" data-view="interior" aria-pressed="false">INTERIOR</button>
-          <button type="button" data-view="instrument" aria-pressed="false">INSTRUMENT</button>
-          <button type="button" data-view="instrument-interior" aria-pressed="false" data-i18n-nl="Instrument open">Instrument cutaway</button>
+          <button type="button" data-view="satellite" aria-pressed="true">Satellite</button>
+          <button type="button" data-view="interior" aria-pressed="false">Inside</button>
+          <button type="button" data-view="instrument" aria-pressed="false">Instrument</button>
+          <button type="button" data-view="instrument-interior" aria-pressed="false" data-i18n-nl="Instrument open">Inside instrument</button>
           <button type="button" data-view="mirror" aria-pressed="false">Mirror</button>
           <button type="button" data-view="rays" aria-pressed="false">X-rays</button>
-          <button type="button" data-view="parts" aria-pressed="false">CAD parts</button>
+          <button type="button" data-view="parts" aria-pressed="false">Parts</button>
+          <button type="button" id="rotation-toggle" aria-pressed="false">Pause rotation</button>
         </div>
         <section class="optics-panel" hidden aria-label="Optical explanation">
           <h3 data-i18n-nl="Spiegel en detector">Mirror and detector</h3>
           <p data-i18n-nl="Röntgenstralen komen van boven binnen, reflecteren twee keer onder een kleine hoek en worden op de detector gefocust. De buis helpt strooilicht tegen te houden.">X-rays enter from above, reflect twice at shallow angles and focus on the detector. The tube helps block stray light.</p>
           <p data-i18n-nl="Schematische doorsnede; afmetingen en hoeken zijn illustratief. De gele lijnen tonen de stralingsweg, niet zichtbaar licht.">Schematic cutaway; dimensions and angles are illustrative. Yellow lines represent the radiation path, not visible light.</p>
-          <button type="button" id="ray-play" aria-pressed="false" data-i18n-nl="Animatie aan/uit">Toggle animation</button>
+          <button type="button" id="ray-play" aria-pressed="false" data-i18n-nl="Animatie aan/uit">Play / pause X-rays</button>
           <label for="cad-part" data-i18n-nl="Los CAD-onderdeel">Individual CAD part</label>
           <select id="cad-part"><option value="primary">Primary concentrator structure</option><option value="secondary">Secondary concentrator structure</option><option value="fpm">FPM</option><option value="fpcm">FPCM</option></select>
+          <div class="optical-components" aria-label="Optical components"><button type="button" data-optical-component="primary">Primary mirror</button><button type="button" data-optical-component="secondary">Secondary mirror</button><button type="button" data-optical-component="tube">Tube</button><button type="button" data-optical-component="detector">Detector</button><button type="button" data-optical-component="rays">X-rays</button></div>
+          <p id="optical-selection" aria-live="polite" hidden></p>
           <p id="cad-note" data-i18n-nl="CAD-onderdelen worden afzonderlijk getoond, met hun bronkleuren. De aangeleverde concentratorbestanden beschrijven de testconfiguratie van juni 2026; mandrels zijn productiegereedschap.">CAD parts are shown individually with source colors. The supplied concentrator files describe the June 2026 test configuration; mandrels are manufacturing tools.</p>
         </section>
         <div class="earth-horizon" aria-hidden="true"></div>
