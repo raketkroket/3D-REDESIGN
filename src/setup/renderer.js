@@ -15,11 +15,11 @@ export function createRenderer() {
             powerPreference: 'high-performance'
         });
 
-        const maximumPixelRatio = window.matchMedia('(max-width: 899px)').matches ? 1.3 : 1.6;
+        const maximumPixelRatio = 2;
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, maximumPixelRatio));
         renderer.outputColorSpace = THREE.SRGBColorSpace;
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.12;
+        renderer.toneMappingExposure = 0.9;
 
         return renderer;
     } catch {

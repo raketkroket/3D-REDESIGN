@@ -16,7 +16,6 @@ import {
 	getComponentFocus,
 	getSelectableComponentMeshes,
 	highlightComponent,
-	revealComponent,
 	loadInstrument,
 	loadSatellite,
 	resetSatellite,
@@ -62,29 +61,39 @@ function initializeExperience() {
 	const pointer = new THREE.Vector2();
 	const viewButtons = [...document.querySelectorAll("[data-view]")];
 	const controls = createControls(camera, renderer);
-	const lighting = createLights(scene);
-	let frameRequest = null;
-	let viewerInViewport = true;
+	const lighting = createLights(scene, renderer);
+	controls.addEventListener("start", stopCameraTween);
 	let pointerStart = null;
 	let pointerDragged = false;
 	let selectedComponent = null;
 	let activeLanguage = "en";
+	let frameRequest = null;
+	let viewerInViewport = true;
 	let viewRequest = 0;
-	let activeView = "satellite";
-	const optics = createOptics(scene);
-	const parts = createPartViewer(scene);
-	const opticsPanel = document.querySelector(".optics-panel");
-	const partSelect = document.querySelector("#cad-part");
-	const playButton = document.querySelector("#ray-play");
-	let rayPlaying = false;
-	let lastFrameTime = null;
-	let interacting = false;
-	let rotationPaused = false;
-	const defaultPixelRatio = renderer.getPixelRatio();
-	const interactionPixelRatio = Math.min(defaultPixelRatio, 1.25);
-	const toolbar = document.querySelector(".view-switcher");
-	visualization.parentElement.append(toolbar, opticsPanel);
-	controls.autoRotateSpeed = 0.25;
+ let activeView = "satellite";
+ const optics = createOptics(scene);
+ const parts = createPartViewer(scene);
+ const opticsPanel = document.querySelector(".optics-panel");
+ const partSelect = document.querySelector("#cad-part");
+ const playButton = document.querySelector("#ray-play");
+ let rayPlaying = false;
+ let lastFrameTime = null;
+ let interacting = false;
+ let rotationPaused = false;
+ const defaultPixelRatio = Math.min(window.devicePixelRatio, 2);
+ const interactionPixelRatio = Math.min(window.devicePixelRatio, 1.25);
+ const toolbar = document.querySelector(".view-switcher");
+ visualization.parentElement.append(toolbar, opticsPanel);
+ controls.autoRotateSpeed = 0.32;
+ controls.addEventListener("start", () => { interacting = true; setInteractionQuality(true); });
+ controls.addEventListener("end", () => { interacting = false; setInteractionQuality(false); });
+
+ function setInteractionQuality(isInteracting) {
+  const ratio = isInteracting ? interactionPixelRatio : defaultPixelRatio;
+  if (Math.abs(renderer.getPixelRatio() - ratio) > 0.01) renderer.setPixelRatio(ratio);
+  requestRender();
+ }
+
 
 	function requestRender() {
 		if (frameRequest !== null || document.hidden || !viewerInViewport) return;
@@ -94,52 +103,29 @@ function initializeExperience() {
 	function renderFrame(time) {
 		frameRequest = null;
 		if (document.hidden || !viewerInViewport) return;
-		const delta = lastFrameTime === null ? 0 : Math.min((time - lastFrameTime) / 1000, 0.05);
-		lastFrameTime = time;
-		TWEEN.update(time);
-		controls.autoRotate = !rotationPaused && !interacting && !reduceMotion.matches && !TWEEN.getAll().some((tween) => tween.isPlaying());
-		updateControls(delta);
+  const delta = lastFrameTime === null ? 0 : Math.min((time - lastFrameTime) / 1000, 0.05);
+  lastFrameTime = time;
+  TWEEN.update(time);
+  controls.autoRotate = !rotationPaused && !interacting && !reduceMotion.matches && !TWEEN.getAll().some(tween => tween.isPlaying());
+  updateControls(delta);
 		lighting.update(camera, controls.target);
 		optics.update(optics.isAnimating() ? time : 0);
 		renderer.render(scene, camera);
 		if (controls.autoRotate || optics.isAnimating() || TWEEN.getAll().some((tween) => tween.isPlaying())) requestRender();
 	}
 
-	function setInteractionQuality(isInteracting) {
-		const targetRatio = isInteracting ? interactionPixelRatio : defaultPixelRatio;
-		if (Math.abs(renderer.getPixelRatio() - targetRatio) > 0.01) {
-			renderer.setPixelRatio(targetRatio);
-		}
-		requestRender();
-	}
-
-	controls.addEventListener("start", () => {
-		stopCameraTween();
-		interacting = true;
-		setInteractionQuality(true);
-	});
 	controls.addEventListener("change", requestRender);
-	controls.addEventListener("end", () => {
-		interacting = false;
-		setInteractionQuality(false);
-	});
-
-	document.addEventListener("visibilitychange", () => {
-		lastFrameTime = null;
-		if (!document.hidden) requestRender();
-	});
+	document.addEventListener("visibilitychange", () => { lastFrameTime = null; requestRender(); });
 	new IntersectionObserver(([entry]) => {
 		viewerInViewport = entry.isIntersecting;
 		if (viewerInViewport) requestRender();
 	}).observe(visualization);
 
+
 	if (import.meta.env.DEV) {
 		window.__nebulaDebug = { scene, camera, controls, renderer };
 	}
 
-	// Warm local light makes selected hardware visibly glow instead of only changing tint.
-	const selectionLight = new THREE.PointLight(0xff8b61, 0, 1, 1.7);
-	scene.add(selectionLight);
 	function frameCurrentModel(viewName) {
 		if (viewName === "instrument" || viewName === "instrument-interior") {
 			const instrument = getInstrument();
@@ -149,12 +135,17 @@ function initializeExperience() {
 
 		const satellite = getSatellite();
 		if (satellite) {
-			frameModelRoot(camera, controls, satellite, { padding: 1.02 });
+			frameModelRoot(camera, controls, satellite, { padding: 1.12, direction: [0.8, 0.5, 1] });
 		}
 	}
 
 	async function applyView(viewName) {
 		const request = ++viewRequest;
+		highlightComponent(null);
+		selectedComponent = null;
+		componentLinks.forEach(link => link.removeAttribute("aria-current"));
+		componentDetails.forEach(detail => { detail.hidden = true; });
+		componentDetailsPanel.classList.remove("has-selection");
 		stopCameraTween();
 		optics.hide();
 		parts.hide();
@@ -247,6 +238,7 @@ function initializeExperience() {
 
 	new ResizeObserver(resizeRenderer).observe(visualization);
 	resizeRenderer();
+
 	requestRender();
 
 	function selectComponent(component) {
@@ -255,17 +247,18 @@ function initializeExperience() {
 		if (!["satellite", "interior"].includes(activeView)) applyView("satellite");
 
 		selectedComponent = component;
-		revealComponent(component);
+		// Preserve the current viewer's automatic reveal of the X-ray assembly.
+		if (component === "xrayInstrument") {
+			showSatelliteInterior();
+			activeView = "interior";
+		} else if (getCurrentView() === "interior") {
+			showSatellite();
+			activeView = "satellite";
+		}
+		viewButtons.forEach(button => button.setAttribute("aria-pressed", String(button.dataset.view === activeView)));
 		highlightComponent(component);
 		const focus = getComponentFocus(component);
-		if (focus) {
-			selectionLight.position.copy(focus.componentCenter);
-			selectionLight.distance = Math.max(focus.componentRadius * 5, focus.satelliteRadius * 0.45);
-			selectionLight.intensity = component === "starTrackerModule" || component === "xrayInstrument" ? 18 : 10;
-			updateCamera(controls, camera, focus, reduceMotion.matches ? 0 : 1100);
-		} else {
-			selectionLight.intensity = 0;
-		}
+		if (focus) updateCamera(controls, camera, focus, reduceMotion.matches ? 0 : 1100);
 
 		componentLinks.forEach((item) => item.removeAttribute("aria-current"));
 		link.setAttribute("aria-current", "true");
@@ -348,7 +341,6 @@ function initializeExperience() {
 		viewRequest += 1;
 		stopCameraTween();
 		selectedComponent = null;
-		selectionLight.intensity = 0;
 		highlightComponent(null);
 		resetSatellite(reduceMotion.matches ? 0 : 1100);
 		showSatellite();
@@ -400,7 +392,6 @@ function initializeExperience() {
 	viewButtons.forEach((button) => {
 		button.addEventListener("click", () => {
 			const viewName = button.dataset.view;
-			selectionLight.intensity = 0;
 			applyView(viewName).catch((error) => {
 				console.error("View failed", error);
 				selectionStatus.textContent = activeLanguage === "nl" ? "Model laden mislukt. Probeer opnieuw." : "Model loading failed. Please try again.";

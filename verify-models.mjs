@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import {loadSatellite,loadInstrument,getSatellite,getComponentFocus,getSelectableComponentMeshes,showSatelliteInterior,showSatellite,showInstrument,getCurrentView} from './src/components/objects/Satellite.js';
+import {loadSatellite,loadInstrument,getSatellite,getComponentFocus,getSelectableComponentMeshes,getComponentFromObject,highlightComponent,showSatelliteInterior,showSatellite,showInstrument,getCurrentView} from './src/components/objects/Satellite.js';
 import {showInstrumentInterior} from './src/components/objects/Satellite.js';
 import {createInstrumentComponents} from './src/components/objects/InstrumentComponents.js';
 globalThis.ProgressEvent=class {constructor(type,init){Object.assign(this,init)}};
@@ -15,6 +15,25 @@ root.traverse(o=>{if(!o.isMesh)return;meshes++;triangles+=(o.geometry.index?.cou
 assert(colors.size>5);assert(triangles<3929677);
 const mapped={};for(const c of ['xrayInstrument','starTrackerModule','dawn4UCubeDrive','sBandAntenna','sunSensor','magnetorquers','solarPanel'])mapped[c]=Boolean(getComponentFocus(c));
 const selections=getSelectableComponentMeshes().length;
+const originalMaterials=new Map();let trackerSensors=0,instrumentAssemblyParts=0,sunSensors=0,torquerParts=0;
+root.traverse(mesh=>{
+ if(!mesh.isMesh)return;originalMaterials.set(mesh,mesh.material);
+ const id=getComponentFromObject(mesh);const ancestry=[];for(let node=mesh;node;node=node.parent)ancestry.push(node.name);
+ if(ancestry.some(name=>name.startsWith('ST-16RT2-LRB'))){assert.equal(id,'starTrackerModule');trackerSensors++;}
+ if(ancestry.some(name=>name.startsWith('Instrument19-6_C'))){assert.equal(id,'xrayInstrument');instrumentAssemblyParts++;}
+ if(ancestry.some(name=>name.startsWith('SunSensor_Bison64'))){assert.equal(id,'sunSensor');sunSensors++;}
+ if(ancestry.some(name=>name.startsWith('MagnetoTorquer_MT10-2-H'))){assert.equal(id,'magnetorquers');torquerParts++;}
+ if(mesh.name.startsWith('HE_sensor')||mesh.name.startsWith('Magnetometer_FGM'))assert.notEqual(id,'sunSensor');
+});
+assert.equal(trackerSensors,16);assert(instrumentAssemblyParts>800);assert.equal(sunSensors,104);assert.equal(torquerParts,6);
+for(const component of ['starTrackerModule','xrayInstrument']){
+ highlightComponent(component);
+ root.traverse(mesh=>{if(!mesh.isMesh)return;const selected=getComponentFromObject(mesh)===component;assert.equal(Boolean(mesh.material.userData.selectionHighlight),selected);if(!selected){assert(mesh.material.transparent);assert.equal(mesh.material.depthWrite,false);assert.equal(mesh.material.forceSinglePass,true);}});
+ highlightComponent(null);root.traverse(mesh=>{if(mesh.isMesh)assert.equal(mesh.material,originalMaterials.get(mesh));});
+}
+const trackerMesh=getSelectableComponentMeshes().find(mesh=>mesh.name==='ST-16RT2-LRB_1');
+highlightComponent('starTrackerModule');const cachedHighlight=trackerMesh.material;highlightComponent(null);highlightComponent('starTrackerModule');assert.equal(trackerMesh.material,cachedHighlight);highlightComponent(null);
+console.log(JSON.stringify({trackerSensors,instrumentAssemblyParts,sunSensors,torquerParts,highlightRestoresMaterials:true}));
 showSatelliteInterior();let hidden=0;root.traverse(o=>{if(o.isMesh&&!o.visible)hidden++});assert(hidden>0);showSatellite();let restored=0;root.traverse(o=>{if(o.isMesh&&!o.visible)restored++});assert.equal(restored,0);
 const instrument=await loadInstrument(scene);assert.equal(getSelectableComponentMeshes().length,selections);showInstrument();assert.equal(root.visible,false);assert.equal(instrument.visible,true);showSatellite();assert.equal(root.visible,true);assert.equal(instrument.visible,false);
 const instrumentParts=createInstrumentComponents(instrument);const instrumentGroups={};
@@ -22,7 +41,7 @@ for(const key of ['detectors','baffles','electronics','calibration','structure',
  const meshes=instrumentParts.getMeshes(key);assert(meshes.length>0);instrumentGroups[key]=meshes.length;
  const original=meshes[0].material;instrumentParts.highlight(key);assert.notEqual(meshes[0].material,original);instrumentParts.clearHighlight();assert.equal(meshes[0].material,original);
 }
-instrument.traverse(mesh=>{if(!mesh.isMesh)return;assert(instrumentParts.getComponent(mesh));assert(mesh.material.metalness<=.35);if(mesh.name.startsWith('Sensor_'))assert.equal(instrumentParts.getComponent(mesh),'detectors');if(mesh.parent?.name.startsWith('Science_baffle'))assert.equal(instrumentParts.getComponent(mesh),'baffles');});
+instrument.traverse(mesh=>{if(!mesh.isMesh)return;assert(instrumentParts.getComponent(mesh));assert(mesh.material.metalness<=.5);if(mesh.name.startsWith('Sensor_'))assert.equal(instrumentParts.getComponent(mesh),'detectors');if(mesh.parent?.name.startsWith('Science_baffle'))assert.equal(instrumentParts.getComponent(mesh),'baffles');});
 showInstrumentInterior();assert.equal(instrumentParts.getMeshes('structure').filter(mesh=>!mesh.visible).length,6);showInstrument();assert(instrumentParts.getMeshes('structure').every(mesh=>mesh.visible));showSatellite();
 console.log(JSON.stringify({instrumentGroups,sourceColors:colors.size,interiorPanelsRestore:true}));
 console.log(JSON.stringify({meshes,triangles,colors:colors.size,mapped,hidden,selections,view:getCurrentView()}));

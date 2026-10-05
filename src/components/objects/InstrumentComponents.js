@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { createSelectionHighlight } from "./SelectionHighlight.js";
 
 // These groups follow the names in the supplied instrument assembly.
 function componentForMesh(mesh) {
@@ -19,43 +20,19 @@ function componentForMesh(mesh) {
 export function createInstrumentComponents(root) {
 	const groups = new Map();
 	const meshGroups = new Map();
-	const originals = new Map();
-	const highlighted = new Set();
+	const selection = createSelectionHighlight(root, { ghostOpacity: 0.2 });
 	root.traverse((mesh) => {
 		if (!mesh.isMesh) return;
 		const component = componentForMesh(mesh);
 		if (!groups.has(component)) groups.set(component, []);
 		groups.get(component).push(mesh);
 		meshGroups.set(mesh, component);
-		originals.set(mesh, mesh.material);
 	});
-
-	function clearHighlight() {
-		for (const mesh of highlighted) {
-			const materials = [].concat(mesh.material);
-			mesh.material = originals.get(mesh);
-			materials.forEach((material) => material.dispose());
-		}
-		highlighted.clear();
-	}
 
 	return {
 		getComponent: (mesh) => meshGroups.get(mesh),
 		getMeshes: (component) => groups.get(component) ?? [],
-		highlight(component) {
-			clearHighlight();
-			for (const mesh of groups.get(component) ?? []) {
-				const source = originals.get(mesh);
-				const materials = [].concat(source).map((material) => {
-					const copy = material.clone();
-					copy.emissive?.set(0xe9845b);
-					copy.emissiveIntensity = 0.14;
-					return copy;
-				});
-				mesh.material = Array.isArray(source) ? materials : materials[0];
-				highlighted.add(mesh);
-			}
-		},
+		highlight(component) { selection.apply(groups.get(component) ?? []); },
 		getFocus(component, camera, target) {
 			root.updateWorldMatrix(true, true);
 			const box = new THREE.Box3().makeEmpty();
@@ -70,6 +47,6 @@ export function createInstrumentComponents(root) {
 				direction: camera.position.clone().sub(target).normalize(),
 			};
 		},
-		clearHighlight,
+		clearHighlight: selection.clear,
 	};
 }
