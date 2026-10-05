@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { createOptics, createPartViewer } from "./components/objects/Optics.js";
 import TWEEN from "three/examples/jsm/libs/tween.module.js";
 import { createScene } from "./setup/scene.js";
 import { createCamera } from "./setup/camera.js";
@@ -20,6 +21,7 @@ import {
 	showSatellite,
 	showSatelliteInterior,
 	showInstrument,
+	showInstrumentInterior,
 	getCurrentView,
 } from "./components/objects/Satellite.js";
 import { createStars } from "./components/objects/star.js";
@@ -55,6 +57,14 @@ function initializeExperience() {
 	let frameRequest = null;
 	let viewerInViewport = true;
 	let viewRequest = 0;
+ let activeView = "satellite";
+ const optics = createOptics(scene);
+ const parts = createPartViewer(scene);
+ const opticsPanel = document.querySelector(".optics-panel");
+ const partSelect = document.querySelector("#cad-part");
+ const playButton = document.querySelector("#ray-play");
+ let rayPlaying = false;
+
 
 	function requestRender() {
 		if (frameRequest !== null || document.hidden || !viewerInViewport) return;
@@ -66,8 +76,9 @@ function initializeExperience() {
 		if (document.hidden || !viewerInViewport) return;
 		TWEEN.update(time);
 		updateControls();
+		optics.update(optics.isAnimating() ? time : 0);
 		renderer.render(scene, camera);
-		if (TWEEN.getAll().some((tween) => tween.isPlaying())) requestRender();
+		if (optics.isAnimating() || TWEEN.getAll().some((tween) => tween.isPlaying())) requestRender();
 	}
 
 	controls.addEventListener("change", requestRender);
@@ -85,7 +96,7 @@ function initializeExperience() {
 	createLights(scene);
 
 	function frameCurrentModel(viewName) {
-		if (viewName === "instrument") {
+		if (viewName === "instrument" || viewName === "instrument-interior") {
 			const instrument = getInstrument();
 			if (instrument) frameModelRoot(camera, controls, instrument, { padding: 1.1 });
 			return;
@@ -100,18 +111,44 @@ function initializeExperience() {
 	async function applyView(viewName) {
 		const request = ++viewRequest;
 		stopCameraTween();
+		optics.hide();
+		parts.hide();
+		rayPlaying = false;
+		playButton.setAttribute("aria-pressed", "false");
 		if (viewName === "satellite") {
 			showSatellite();
 			frameCurrentModel(viewName);
 		} else if (viewName === "interior") {
 			showSatelliteInterior();
 			frameCurrentModel(viewName);
-		} else if (viewName === "instrument") {
+		} else if (viewName === "instrument" || viewName === "instrument-interior") {
 			await loadInstrument(scene);
 			if (request !== viewRequest) return;
-			showInstrument();
+			if (viewName === "instrument-interior") showInstrumentInterior();
+			else showInstrument();
 			frameCurrentModel(viewName);
-		}
+  } else if (viewName === "mirror" || viewName === "rays") {
+   if (getSatellite()) getSatellite().visible = false;
+   if (getInstrument()) getInstrument().visible = false;
+   optics.show(viewName === "rays");
+   frameModelRoot(camera, controls, optics.root, {padding:1.1});
+  } else if (viewName === "parts") {
+   const part = await parts.load(partSelect.value);
+   if (request !== viewRequest) return;
+   if (getSatellite()) getSatellite().visible = false;
+   if (getInstrument()) getInstrument().visible = false;
+   parts.show(part);
+   frameModelRoot(camera, controls, part, {padding:1.1});
+  }
+  activeView = viewName;
+  const optical = ["mirror", "rays", "parts"].includes(viewName);
+  opticsPanel.hidden = !optical;
+  document.querySelector(".experience").classList.toggle("optical-view", optical);
+  playButton.hidden = viewName !== "rays";
+  partSelect.hidden = viewName !== "parts";
+  opticsPanel.querySelector('label').hidden = viewName !== "parts";
+  document.querySelector("#cad-note").hidden = viewName !== "parts";
+  opticsPanel.querySelectorAll('p:not(#cad-note)').forEach(p => p.hidden = viewName === "parts");
 
 		viewButtons.forEach((button) => {
 			button.setAttribute("aria-pressed", String(button.dataset.view === viewName));
@@ -150,7 +187,7 @@ function initializeExperience() {
 	function selectComponent(component) {
 		const link = componentLinks.find((item) => item.dataset["3dObject"] === component);
 		if (!link) return;
-		if (getCurrentView() === "instrument") applyView("satellite");
+		if (!["satellite", "interior"].includes(activeView)) applyView("satellite");
 
 		selectedComponent = component;
 		highlightComponent(component);
@@ -200,6 +237,11 @@ function initializeExperience() {
 	}
 
 	function resetExperience() {
+		optics.hide();
+		parts.hide();
+		activeView = "satellite";
+		opticsPanel.hidden = true;
+		document.querySelector(".experience").classList.remove("optical-view");
 		viewRequest += 1;
 		stopCameraTween();
 		selectedComponent = null;
@@ -259,6 +301,15 @@ function initializeExperience() {
 		button.addEventListener("click", () => setLanguage(button.dataset.language));
 	});
 
+ partSelect.addEventListener("change", () => applyView("parts").catch(() => { selectionStatus.textContent = "CAD part could not be loaded."; }));
+ playButton.addEventListener("click", () => {
+  rayPlaying = !rayPlaying;
+  optics.setPlaying(rayPlaying && !reduceMotion.matches);
+  playButton.setAttribute("aria-pressed", String(rayPlaying && !reduceMotion.matches));
+  requestRender();
+ });
+ reduceMotion.addEventListener("change", () => { if (reduceMotion.matches) { optics.setPlaying(false);rayPlaying=false;playButton.setAttribute("aria-pressed","false");requestRender(); } });
+
 	canvas.addEventListener("pointerdown", (event) => {
 		pointerStart = { x: event.clientX, y: event.clientY };
 		pointerDragged = false;
@@ -281,7 +332,7 @@ function initializeExperience() {
 		if (!shouldSelect) return;
 
 		const satellite = getSatellite();
-		if (!satellite || getCurrentView() !== "satellite") return;
+		if (!satellite || activeView !== "satellite") return;
 		const bounds = canvas.getBoundingClientRect();
 		pointer.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
 		pointer.y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;

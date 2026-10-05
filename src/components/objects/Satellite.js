@@ -340,7 +340,7 @@ export function frameModelRoot(camera, controls, object, { padding = 1.6 } = {})
 
 	camera.position.copy(cameraPosition);
 	controls.target.copy(targetPosition);
-	controls.minDistance = distance * 0.9;
+	controls.minDistance = distance * 0.25;
 	controls.maxDistance = distance * 1.55;
 	camera.near = Math.max(0.1, stats.radius * 0.02);
 	camera.far = distance + stats.radius * 10;
@@ -440,6 +440,22 @@ export function showSatelliteInterior() {
 
 export function showInstrument() {
 	setView("instrument");
+	setInstrumentPanels(false);
+}
+
+function setInstrumentPanels(hidden) {
+	if (!instrumentRoot) return;
+	instrumentRoot.traverse((object) => {
+		if (!object.isMesh) return;
+		const path = getObjectPath(object);
+		if (!["top_side_panel", "upper_side_panel", "lower_side_panel", "bottom_side_panel"].some((name) => path.includes(name))) return;
+		object.visible = !hidden;
+	});
+}
+
+export function showInstrumentInterior() {
+	setView("instrument");
+	setInstrumentPanels(true);
 }
 
 export function getComponentFromObject(object) {

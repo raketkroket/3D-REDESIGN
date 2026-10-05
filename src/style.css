@@ -1,7 +1,7 @@
 :root { color-scheme: dark; }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
-body { --accent: #e9845b; --accent-soft: rgb(233 132 91 / 18%); --ink: #f5f2ed; --muted: #aeb9c6; --line: rgb(185 202 219 / 24%); --surface: rgb(6 12 20 / 74%); margin: 0; color: var(--ink); background: #05080d url("/galaxy.jpg") center / cover fixed; background-blend-mode: multiply; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 1rem; line-height: 1.65; }
+body { --accent: #e9845b; --accent-soft: rgb(233 132 91 / 18%); --ink: #f5f2ed; --muted: #aeb9c6; --line: rgb(185 202 219 / 24%); --surface: rgb(6 12 20 / 74%); margin: 0; color: var(--ink); background: #15263a url("/galaxy.jpg") center / cover fixed; background-blend-mode: normal; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 1rem; line-height: 1.65; }
 .site-header, main { width: min(94vw, 1800px); margin-inline: auto; }
 .site-header { display: flex; align-items: center; gap: 1.25rem; min-height: 4.5rem; border-bottom: 1px solid rgb(185 202 219 / 18%); }
 .brand { display: inline-flex; align-items: center; gap: .75rem; color: inherit; font-size: .8rem; font-weight: 600; letter-spacing: .04em; text-decoration: none; text-transform: uppercase; white-space: nowrap; }
@@ -24,7 +24,7 @@ h1 { max-width: none; margin-bottom: 1rem; font-size: clamp(2.5rem, 4vw, 3.5rem)
 .intro p:last-child { margin-bottom: 0; }
 .intro-instructions { display: none; }
 .experience { display: grid; gap: clamp(1.5rem, 3vw, 3.5rem); align-items: stretch; }
-.visualization { position: relative; min-height: min(68vh, 48rem); overflow: hidden; background: rgb(3 7 12 / 48%); box-shadow: inset 0 1px 0 rgb(255 255 255 / 8%), 0 1.5rem 4rem rgb(0 0 0 / 24%); }
+.visualization { position: relative; min-height: min(68vh, 48rem); overflow: hidden; background: rgb(24 42 60 / 18%); box-shadow: inset 0 1px 0 rgb(255 255 255 / 8%), 0 1.5rem 4rem rgb(0 0 0 / 24%); }
 .visualization::before { position: absolute; z-index: 1; top: 0; left: 0; width: 3.5rem; height: 2px; background: var(--accent); content: ""; }
 .visualization h2 { position: absolute; z-index: 1; top: 1.5rem; left: 1.5rem; margin: 0; }
 #app { display: block; width: 100%; height: 100%; cursor: grab; }
@@ -134,3 +134,16 @@ html:not(.js-enhanced):has(#solar-panel:target) a[href="#solar-panel"] .componen
 	html:not(.js-enhanced) .component-navigation { margin-bottom: 1rem; }
 	/* nav staat in de html al voor de info, dus mobiel komt dit vanzelf goed */
 }
+html.js-enhanced .earth-horizon { display: none; }
+.optics-panel { position:absolute;z-index:4;top:1.5rem;left:1.5rem;max-width:23rem;padding:1rem;background:rgb(15 30 45 / 92%);border:1px solid var(--line);border-radius:.5rem; }
+.optics-panel p {margin:.4rem 0;font-size:.85rem;}
+.optics-panel label {display:block;font-size:.8rem;margin-top:.6rem;}
+.optics-panel select,.optics-panel button {max-width:100%;padding:.5rem;background:#263e52;color:white;border:1px solid #95aec2;border-radius:.3rem;}
+.optics-panel[hidden] {display:none;}
+.experience.optical-view .component-navigation,.experience.optical-view .component-details {visibility:hidden;}
+.view-switcher {max-width:calc(100% - 3rem);}
+@media(max-width:899px) {.optics-panel{top:.75rem;left:.75rem;max-width:15rem;padding:.65rem;} .optics-panel p{font-size:.75rem;} .experience.optical-view .component-navigation,.experience.optical-view .component-details{display:none;} }
+
+.view-switcher button {padding:.5rem .75rem;border:1px solid rgb(185 202 219 / 65%);background:rgb(15 30 45 / 90%);color:#f5f2ed;cursor:pointer;border-radius:.25rem;}
+.view-switcher button[aria-pressed="true"] {outline:2px solid #aacfe8;outline-offset:2px;}
+.optical-overview {max-width:50rem;margin:2rem auto;padding:1rem;}

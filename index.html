@@ -47,7 +47,20 @@
           <button type="button" data-view="satellite" aria-pressed="true" style="padding:.5rem .75rem;border:1px solid rgba(233,132,91,.9);background:rgba(8,10,14,.8);color:#f5f2ed;cursor:pointer;">SATELLITE</button>
           <button type="button" data-view="interior" aria-pressed="false" style="padding:.5rem .75rem;border:1px solid rgba(233,132,91,.9);background:rgba(8,10,14,.8);color:#f5f2ed;cursor:pointer;">INTERIOR</button>
           <button type="button" data-view="instrument" aria-pressed="false" style="padding:.5rem .75rem;border:1px solid rgba(233,132,91,.9);background:rgba(8,10,14,.8);color:#f5f2ed;cursor:pointer;">INSTRUMENT</button>
+          <button type="button" data-view="instrument-interior" aria-pressed="false" data-i18n-nl="Instrument open">Instrument cutaway</button>
+          <button type="button" data-view="mirror" aria-pressed="false">Mirror</button>
+          <button type="button" data-view="rays" aria-pressed="false">X-rays</button>
+          <button type="button" data-view="parts" aria-pressed="false">CAD parts</button>
         </div>
+        <section class="optics-panel" hidden aria-label="Optical explanation">
+          <h3 data-i18n-nl="Spiegel en detector">Mirror and detector</h3>
+          <p data-i18n-nl="Röntgenstralen komen van boven binnen, reflecteren twee keer onder een kleine hoek en worden op de detector gefocust. De buis helpt strooilicht tegen te houden.">X-rays enter from above, reflect twice at shallow angles and focus on the detector. The tube helps block stray light.</p>
+          <p data-i18n-nl="Schematische doorsnede; afmetingen en hoeken zijn illustratief. De gele lijnen tonen de stralingsweg, niet zichtbaar licht.">Schematic cutaway; dimensions and angles are illustrative. Yellow lines represent the radiation path, not visible light.</p>
+          <button type="button" id="ray-play" aria-pressed="false" data-i18n-nl="Animatie aan/uit">Toggle animation</button>
+          <label for="cad-part" data-i18n-nl="Los CAD-onderdeel">Individual CAD part</label>
+          <select id="cad-part"><option value="primary">Primary concentrator structure</option><option value="secondary">Secondary concentrator structure</option><option value="fpm">FPM</option><option value="fpcm">FPCM</option></select>
+          <p id="cad-note" data-i18n-nl="CAD-onderdelen worden afzonderlijk getoond, met hun bronkleuren. De aangeleverde concentratorbestanden beschrijven de testconfiguratie van juni 2026; mandrels zijn productiegereedschap.">CAD parts are shown individually with source colors. The supplied concentrator files describe the June 2026 test configuration; mandrels are manufacturing tools.</p>
+        </section>
         <div class="earth-horizon" aria-hidden="true"></div>
         <p id="model-description" class="model-instructions"><span aria-hidden="true" data-i18n-nl="Sleep om te verkennen · Scroll om in te zoomen">Drag to explore · Scroll to zoom</span><span class="visually-hidden" data-i18n-nl="Sleep om het 3D-model te draaien en scroll of knijp om in te zoomen. Gebruik de onderdeel-links als toegankelijk alternatief voor het toetsenbord.">Drag to rotate the 3D model and scroll or pinch to zoom. Use the component links for a keyboard-accessible alternative.</span></p>
       </div>
@@ -83,6 +96,7 @@
       </footer>
     </section>
 
+    <details class="optical-overview"><summary data-i18n-nl="Hoe de röntgenspiegel werkt">How the X-ray mirror works</summary><p data-i18n-nl="Parallelle röntgenstralen reflecteren twee keer onder een kleine hoek: eerst op de primaire spiegel, daarna op de secundaire spiegel. Ze komen samen op de detector. Een buis helpt strooilicht tegen te houden. De interactieve doorsnede is schematisch en niet op schaal.">Parallel X-rays reflect twice at shallow angles: first on the primary mirror, then on the secondary mirror. They converge on the detector. A tube helps block stray light. The interactive cutaway is schematic and not to scale.</p></details>
   </main>
 
   <script type="module" src="/src/main.js"></script>
