@@ -59,6 +59,10 @@ function initializeExperience() {
 
 	createLights(scene);
 
+	// Warm local light makes selected hardware visibly glow instead of only changing tint.
+	const selectionLight = new THREE.PointLight(0xff8b61, 0, 1, 1.7);
+	scene.add(selectionLight);
+
 	function frameCurrentModel(viewName) {
 		if (viewName === "instrument") {
 			const instrument = getInstrument();
@@ -130,9 +134,30 @@ function initializeExperience() {
 		if (!link) return;
 
 		selectedComponent = component;
+
+		// The X-ray assembly sits behind the exterior panels, so reveal the interior first.
+		if (component === "xrayInstrument") {
+			showSatelliteInterior();
+			viewButtons.forEach((button) => {
+				button.setAttribute("aria-pressed", String(button.dataset.view === "interior"));
+			});
+		} else if (getCurrentView() === "interior") {
+			showSatellite();
+			viewButtons.forEach((button) => {
+				button.setAttribute("aria-pressed", String(button.dataset.view === "satellite"));
+			});
+		}
+
 		highlightComponent(component);
 		const focus = getComponentFocus(component);
-		if (focus) updateCamera(controls, camera, focus, reduceMotion.matches ? 0 : 1100);
+		if (focus) {
+			selectionLight.position.copy(focus.componentCenter);
+			selectionLight.distance = Math.max(focus.componentRadius * 5, focus.satelliteRadius * 0.45);
+			selectionLight.intensity = component === "starTrackerModule" || component === "xrayInstrument" ? 18 : 10;
+			updateCamera(controls, camera, focus, reduceMotion.matches ? 0 : 1100);
+		} else {
+			selectionLight.intensity = 0;
+		}
 
 		componentLinks.forEach((item) => item.removeAttribute("aria-current"));
 		link.setAttribute("aria-current", "true");
@@ -177,6 +202,7 @@ function initializeExperience() {
 
 	function resetExperience() {
 		selectedComponent = null;
+		selectionLight.intensity = 0;
 		highlightComponent(null);
 		resetSatellite(reduceMotion.matches ? 0 : 1100);
 		showSatellite();
@@ -218,6 +244,7 @@ function initializeExperience() {
 	viewButtons.forEach((button) => {
 		button.addEventListener("click", () => {
 			const viewName = button.dataset.view;
+			selectionLight.intensity = 0;
 			applyView(viewName);
 		});
 	});
