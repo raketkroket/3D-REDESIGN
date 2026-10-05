@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { createOptics, createPartViewer } from "./components/objects/Optics.js";
+import { createInstrumentComponents } from "./components/objects/InstrumentComponents.js";
 import TWEEN from "three/examples/jsm/libs/tween.module.js";
 import { createScene } from "./setup/scene.js";
 import { createCamera } from "./setup/camera.js";
@@ -44,6 +45,12 @@ function initializeExperience() {
 	const componentLinks = [...document.querySelectorAll("[data-3d-object]")];
 	const componentDetails = [...document.querySelectorAll("[data-component-info]")];
 	const componentDetailsPanel = document.querySelector(".component-details");
+	const instrumentLinks = [...document.querySelectorAll("[data-instrument-component]")];
+	const instrumentDetails = [...document.querySelectorAll("[data-instrument-info]")];
+	const instrumentDetailsPanel = document.querySelector(".instrument-details");
+	const instrumentNavigation = document.querySelector(".instrument-navigation");
+	let instrumentComponents = null;
+	let selectedInstrumentComponent = null;
 	const selectionStatus = document.querySelector(".selection-status");
 	const experienceModeLinks = [...document.querySelectorAll("[data-experience-mode]")];
 	const languageButtons = [...document.querySelectorAll("[data-language]")];
@@ -54,6 +61,7 @@ function initializeExperience() {
 	const pointer = new THREE.Vector2();
 	const viewButtons = [...document.querySelectorAll("[data-view]")];
 	const controls = createControls(camera, renderer);
+	const lighting = createLights(scene);
 	controls.addEventListener("start", stopCameraTween);
 	let pointerStart = null;
 	let pointerDragged = false;
@@ -92,6 +100,7 @@ function initializeExperience() {
   TWEEN.update(time);
   controls.autoRotate = !rotationPaused && !interacting && !reduceMotion.matches && !TWEEN.getAll().some(tween => tween.isPlaying());
   updateControls(delta);
+		lighting.update(camera, controls.target);
 		optics.update(optics.isAnimating() ? time : 0);
 		renderer.render(scene, camera);
 		if (controls.autoRotate || optics.isAnimating() || TWEEN.getAll().some((tween) => tween.isPlaying())) requestRender();
@@ -109,12 +118,10 @@ function initializeExperience() {
 		window.__nebulaDebug = { scene, camera, controls, renderer };
 	}
 
-	createLights(scene);
-
 	function frameCurrentModel(viewName) {
 		if (viewName === "instrument" || viewName === "instrument-interior") {
 			const instrument = getInstrument();
-			if (instrument) frameModelRoot(camera, controls, instrument, { padding: 1.1 });
+			if (instrument) frameModelRoot(camera, controls, instrument, { padding: 1.1, direction: [0.9, -0.25, 1] });
 			return;
 		}
 
@@ -129,6 +136,11 @@ function initializeExperience() {
 		stopCameraTween();
 		optics.hide();
 		parts.hide();
+		instrumentComponents?.clearHighlight();
+		selectedInstrumentComponent = null;
+		instrumentLinks.forEach(link => link.removeAttribute("aria-current"));
+		instrumentDetails.forEach(detail => { detail.hidden = true; });
+		instrumentDetailsPanel.classList.remove("has-selection");
 		rayPlaying = false;
 		playButton.setAttribute("aria-pressed", "false");
 		if (viewName === "satellite") {
@@ -140,6 +152,8 @@ function initializeExperience() {
 		} else if (viewName === "instrument" || viewName === "instrument-interior") {
 			await loadInstrument(scene);
 			if (request !== viewRequest) return;
+			instrumentComponents ??= createInstrumentComponents(getInstrument());
+			highlightComponent(null);
 			if (viewName === "instrument-interior") showInstrumentInterior();
 			else showInstrument();
 			frameCurrentModel(viewName);
@@ -160,6 +174,10 @@ function initializeExperience() {
    frameModelRoot(camera, controls, part, {padding:1.1});
   }
   activeView = viewName;
+		const instrumentView = ["instrument", "instrument-interior"].includes(viewName);
+		instrumentNavigation.hidden = !instrumentView;
+		instrumentDetailsPanel.hidden = !instrumentView;
+		document.querySelector(".experience").classList.toggle("instrument-view", instrumentView);
   opticalSelection.hidden = true;
   opticsPanel.querySelector('.optical-components').hidden = !["mirror","rays"].includes(viewName);
   const optical = ["mirror", "rays", "parts"].includes(viewName);
@@ -184,12 +202,17 @@ function initializeExperience() {
 				window.__nebulaDebug.materialMap = getSatelliteMaterialMap();
 			}
 			console.log("[satellite] loaded and framed", satelliteModel.name);
-			applyView("satellite");
+			if (viewRequest === 0) applyView("satellite");
+			else {
+				satelliteModel.visible = ["satellite", "interior"].includes(activeView);
+				if (activeView === "interior") showSatelliteInterior();
+				requestRender();
+			}
 		},
 		onError: activateFallback,
 	});
 
-	createStars(1800, scene);
+	createStars(6500, scene);
 
 	function resizeRenderer() {
 		const { width, height } = visualization.getBoundingClientRect();
@@ -238,6 +261,30 @@ function initializeExperience() {
 		selectionStatus.textContent = activeLanguage === "nl" ? `${label} geselecteerd.` : `${label} selected.`;
 	}
 
+	function selectInstrumentComponent(component) {
+		const link = instrumentLinks.find(item => item.dataset.instrumentComponent === component);
+		if (!link || !instrumentComponents) return;
+		selectedInstrumentComponent = component;
+		instrumentComponents.highlight(component);
+		const focus = instrumentComponents.getFocus(component, camera, controls.target);
+		if (focus) updateCamera(controls, camera, focus, reduceMotion.matches ? 0 : 850);
+		instrumentLinks.forEach(item => {
+			if (item === link) item.setAttribute("aria-current", "true");
+			else item.removeAttribute("aria-current");
+		});
+		instrumentDetails.forEach(detail => { detail.hidden = detail.id !== link.hash.slice(1); });
+		instrumentDetailsPanel.classList.add("has-selection");
+		updateInstrumentStatus();
+		requestRender();
+	}
+
+	function updateInstrumentStatus() {
+		const link = instrumentLinks.find(item => item.dataset.instrumentComponent === selectedInstrumentComponent);
+		const label = link?.querySelector(".component-label").textContent;
+		document.querySelector(".instrument-status").textContent = label
+			? `${label} ${activeLanguage === "nl" ? "geselecteerd." : "selected."}` : "";
+	}
+
 	function setLanguage(language) {
 		activeLanguage = language;
 		document.documentElement.lang = language;
@@ -248,6 +295,8 @@ function initializeExperience() {
 			button.setAttribute("aria-pressed", String(button.dataset.language === language));
 		});
 		updateSelectionStatus(selectedComponent);
+		updateInstrumentStatus();
+		updateRotationLabel();
 	}
 
 	function setExperienceMode(mode) {
@@ -261,6 +310,10 @@ function initializeExperience() {
 		optics.hide();
 		parts.hide();
 		activeView = "satellite";
+		instrumentComponents?.clearHighlight();
+		instrumentNavigation.hidden = true;
+		instrumentDetailsPanel.hidden = true;
+		document.querySelector(".experience").classList.remove("instrument-view");
 		opticsPanel.hidden = true;
 		document.querySelector(".experience").classList.remove("optical-view");
 		viewRequest += 1;
@@ -285,6 +338,7 @@ function initializeExperience() {
 		document.documentElement.classList.remove("js-enhanced");
 		visualization.classList.add("model-unavailable");
 		componentDetails.forEach((detail) => (detail.hidden = false));
+		instrumentDetails.forEach((detail) => (detail.hidden = false));
 	}
 
 	document.documentElement.classList.add("js-enhanced");
@@ -297,6 +351,11 @@ function initializeExperience() {
 			selectComponent(link.dataset["3dObject"]);
 		});
 	});
+	instrumentLinks.forEach(link => link.addEventListener("click", event => {
+		if (!document.documentElement.classList.contains("js-enhanced")) return;
+			event.preventDefault();
+			selectInstrumentComponent(link.dataset.instrumentComponent);
+	}));
 
 	experienceModeLinks.forEach((link) => {
 		link.addEventListener("click", (event) => {
@@ -323,7 +382,12 @@ function initializeExperience() {
 	});
 
  const rotationButton = document.querySelector("#rotation-toggle");
- rotationButton.addEventListener("click", () => { rotationPaused = !rotationPaused;rotationButton.setAttribute("aria-pressed",String(rotationPaused));rotationButton.textContent = rotationPaused ? "Resume rotation" : "Pause rotation";requestRender(); });
+ function updateRotationLabel() {
+  rotationButton.textContent = activeLanguage === "nl"
+   ? (rotationPaused ? "Draaien hervatten" : "Draaien pauzeren")
+   : (rotationPaused ? "Resume rotation" : "Pause rotation");
+ }
+ rotationButton.addEventListener("click", () => { rotationPaused = !rotationPaused;rotationButton.setAttribute("aria-pressed",String(rotationPaused));updateRotationLabel();requestRender(); });
  const opticalCopy = {
  primary: ["Primary mirror", "The first shallow-angle reflection redirects incoming X-rays toward the secondary mirror."],
  secondary: ["Secondary mirror", "The second reflection directs the X-rays toward the focal point on the detector."],
@@ -376,8 +440,16 @@ function initializeExperience() {
    if(hit)explainOptics(hit.object.userData.component);
    return;
   }
-  if(["instrument","instrument-interior","parts"].includes(activeView)) {
-   const root=activeView==="parts"?parts.getActive():getInstrument();
+  if(["instrument","instrument-interior"].includes(activeView)) {
+   const root=getInstrument();
+   if(!root)return;
+   const hit=raycaster.intersectObject(root,true).find(hit=>isObjectVisible(hit.object));
+   const component=hit && instrumentComponents?.getComponent(hit.object);
+   if(component)selectInstrumentComponent(component);
+   return;
+  }
+  if(activeView==="parts") {
+   const root=parts.getActive();
    if(!root)return;
    const hit=raycaster.intersectObject(root,true).find(hit=>isObjectVisible(hit.object));
    if(hit){opticsPanel.hidden=false;opticsPanel.querySelectorAll('p:not(#optical-selection),label,select,.optical-components,#ray-play').forEach(element=>element.hidden=true);opticalSelection.hidden=false;opticalSelection.textContent="CAD part: "+(hit.object.name||hit.object.parent?.name||"Unnamed part")+". Name from the supplied CAD model.";}

@@ -18,7 +18,7 @@ export function createRenderer() {
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, maximumPixelRatio));
         renderer.outputColorSpace = THREE.SRGBColorSpace;
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.15;
+        renderer.toneMappingExposure = 0.9;
 
         return renderer;
     } catch {

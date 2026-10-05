@@ -227,6 +227,7 @@ function preserveBaseMaterial(object) {
 
 function prepareModelMaterials(root, applyReferenceAppearance) {
 	const report = [];
+	const displayMaterials = new Map();
 	root.updateWorldMatrix(true, true);
 
 	root.traverse((object) => {
@@ -248,6 +249,19 @@ function prepareModelMaterials(root, applyReferenceAppearance) {
 		});
 
 		if (category !== "OTHER") object.material = visualCategories[category];
+		else {
+			// Keep STEP base colors, but soften its all-metal export defaults.
+			const materials = importedMaterials.map((source) => {
+				if (!displayMaterials.has(source)) {
+					const material = source.clone();
+					material.metalness = Math.min(material.metalness, 0.35);
+					material.roughness = THREE.MathUtils.clamp(material.roughness, 0.55, 0.85);
+					displayMaterials.set(source, material);
+				}
+				return displayMaterials.get(source);
+			});
+			object.material = Array.isArray(object.material) ? materials : materials[0];
+		}
 		preserveBaseMaterial(object);
 		registerMeshComponent(object, root);
 	});
@@ -325,7 +339,7 @@ export function getModelStats(object) {
 	};
 }
 
-export function frameModelRoot(camera, controls, object, { padding = 1.6 } = {}) {
+export function frameModelRoot(camera, controls, object, { padding = 1.6, direction } = {}) {
 	if (!object || !camera || !controls) return null;
 	const stats = getModelStats(object);
 	if (!stats) return null;
@@ -334,7 +348,9 @@ export function frameModelRoot(camera, controls, object, { padding = 1.6 } = {})
 	const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * camera.aspect);
 	const limitingFov = Math.min(verticalFov, horizontalFov);
 	const distance = (stats.radius / Math.sin(limitingFov / 2)) * padding;
-	const cameraOffset = new THREE.Vector3(0, stats.radius * 0.18, distance);
+	const cameraOffset = direction
+		? new THREE.Vector3(...direction).normalize().multiplyScalar(distance)
+		: new THREE.Vector3(0, stats.radius * 0.18, distance);
 	const targetPosition = stats.center.clone();
 	const cameraPosition = targetPosition.clone().add(cameraOffset);
 
@@ -345,7 +361,17 @@ export function frameModelRoot(camera, controls, object, { padding = 1.6 } = {})
 	camera.near = Math.max(0.1, stats.radius * 0.02);
 	camera.far = distance + stats.radius * 10;
 	camera.updateProjectionMatrix();
+	// Flush the previous view's damping before setting this view's orbit.
+	const damping = controls.enableDamping;
+	const autoRotate = controls.autoRotate;
+	controls.enableDamping = false;
+	controls.autoRotate = false;
 	controls.update();
+	camera.position.copy(cameraPosition);
+	controls.target.copy(targetPosition);
+	controls.update();
+	controls.enableDamping = damping;
+	controls.autoRotate = autoRotate;
 
 	console.log("[camera-framing]", {
 		center: targetPosition.toArray(),
