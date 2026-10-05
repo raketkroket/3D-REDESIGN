@@ -94,6 +94,7 @@ const satelliteInteriorHideNames = [
 	"Side_Panel",
 	"side_panel",
 	"Panel",
+	"Concentrator_Sunshades_step",
 ];
 
 const meshComponents = new Map();
@@ -262,7 +263,11 @@ function setInstrumentInteriorVisibility(isInterior) {
 	if (!satelliteRoot) return;
 	satelliteRoot.traverse((object) => {
 		if (!object.isMesh) return;
-		const shouldHide = isInterior && matchesComponentName(getObjectPath(object), satelliteInteriorHideNames.map((name) => name.toLowerCase().replace(/[\s:.-]+/g, "_")));
+		// P2/P3/P6/P12 are the instrument's six solid enclosure walls.
+		// Keep the optical bench, concentrators and mounting hardware visible.
+		const instrumentWall = object.parent?.name.startsWith("InstrumentHexa_B")
+			&& /^(?:P2|P3|P6|P12)\d*$/.test(object.name);
+		const shouldHide = isInterior && (instrumentWall || matchesComponentName(getObjectPath(object), satelliteInteriorHideNames.map((name) => name.toLowerCase().replace(/[\s:.-]+/g, "_"))));
 		if (shouldHide) {
 			object.userData.wasHiddenByInterior = true;
 			object.visible = false;
@@ -488,10 +493,46 @@ export function getSelectableComponentMeshes() {
 	return [...meshComponents.keys()];
 }
 
-export function getComponentFocus(component) {
+export function getComponentFocus(component, { camera, object } = {}) {
 	if (!satelliteRoot) return null;
 
 	satelliteRoot.updateWorldMatrix(true, true);
+	if (component === "sunSensor") {
+		const sensors = new Set();
+		for (const mesh of componentMeshes.get(component) ?? []) {
+			for (let node = mesh; node && node !== satelliteRoot; node = node.parent) {
+				if (node.name.startsWith("SunSensor_Bison64")) { sensors.add(node); break; }
+			}
+		}
+		const satelliteBox = new THREE.Box3().setFromObject(satelliteRoot);
+		const satelliteCenter = satelliteBox.getCenter(new THREE.Vector3());
+		const viewDirection = camera ? camera.position.clone().sub(satelliteCenter).normalize() : new THREE.Vector3(0.8, 0.5, 1).normalize();
+		let clickedSensor = object;
+		while (clickedSensor && !sensors.has(clickedSensor)) clickedSensor = clickedSensor.parent;
+		let bestFocus = null;
+		let bestScore = -Infinity;
+		for (const sensor of sensors) {
+			const box = new THREE.Box3().setFromObject(sensor);
+			const size = box.getSize(new THREE.Vector3());
+			const center = box.getCenter(new THREE.Vector3());
+			// The sensor's shallow axis is its outward-facing optical surface.
+			const axis = [0, 1, 2].reduce((a, b) => size.getComponent(a) < size.getComponent(b) ? a : b);
+			const normal = new THREE.Vector3().setComponent(axis, Math.sign(center.getComponent(axis) - satelliteCenter.getComponent(axis)) || 1);
+			const score = sensor === clickedSensor ? 2 : normal.dot(viewDirection);
+			if (score <= bestScore) continue;
+			bestScore = score;
+			const tangent = viewDirection.clone().addScaledVector(normal, -viewDirection.dot(normal));
+			bestFocus = {
+				componentCenter: center,
+				direction: normal.addScaledVector(tangent, 0.45).normalize(),
+				componentRadius: size.length() / 2,
+				satelliteRadius: satelliteBox.getBoundingSphere(new THREE.Sphere()).radius,
+				detailView: true,
+				focusedObject: sensor,
+			};
+		}
+		return bestFocus;
+	}
 	const componentBox = new THREE.Box3().makeEmpty();
 	let meshCount = 0;
 

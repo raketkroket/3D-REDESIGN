@@ -241,7 +241,7 @@ function initializeExperience() {
 
 	requestRender();
 
-	function selectComponent(component) {
+	function selectComponent(component, object) {
 		const link = componentLinks.find((item) => item.dataset["3dObject"] === component);
 		if (!link) return;
 		if (!["satellite", "interior"].includes(activeView)) applyView("satellite");
@@ -251,13 +251,13 @@ function initializeExperience() {
 		if (component === "xrayInstrument") {
 			showSatelliteInterior();
 			activeView = "interior";
-		} else if (getCurrentView() === "interior") {
+		} else if (component === "solarPanel" && getCurrentView() === "interior") {
 			showSatellite();
 			activeView = "satellite";
 		}
 		viewButtons.forEach(button => button.setAttribute("aria-pressed", String(button.dataset.view === activeView)));
 		highlightComponent(component);
-		const focus = getComponentFocus(component);
+		const focus = getComponentFocus(component, { camera, object });
 		if (focus) updateCamera(controls, camera, focus, reduceMotion.matches ? 0 : 1100);
 
 		componentLinks.forEach((item) => item.removeAttribute("aria-current"));
@@ -483,7 +483,7 @@ function initializeExperience() {
   if (!satellite) return;
 		const hit = raycaster.intersectObjects(getSelectableComponentMeshes(), false).find(hit => isObjectVisible(hit.object));
 		const component = hit && getComponentFromObject(hit.object);
-		if (component) selectComponent(component);
+		if (component) selectComponent(component, hit.object);
 	});
 }
 

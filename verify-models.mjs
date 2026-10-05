@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import {loadSatellite,loadInstrument,getSatellite,getComponentFocus,getSelectableComponentMeshes,getComponentFromObject,highlightComponent,showSatelliteInterior,showSatellite,showInstrument,getCurrentView} from './src/components/objects/Satellite.js';
 import {showInstrumentInterior} from './src/components/objects/Satellite.js';
 import {createInstrumentComponents} from './src/components/objects/InstrumentComponents.js';
+import {updateCamera} from './src/scripts/updateCamera.js';
 globalThis.ProgressEvent=class {constructor(type,init){Object.assign(this,init)}};
 globalThis.self=globalThis;
 const nativeFetch=globalThis.fetch;
@@ -34,7 +35,21 @@ for(const component of ['starTrackerModule','xrayInstrument']){
 const trackerMesh=getSelectableComponentMeshes().find(mesh=>mesh.name==='ST-16RT2-LRB_1');
 highlightComponent('starTrackerModule');const cachedHighlight=trackerMesh.material;highlightComponent(null);highlightComponent('starTrackerModule');assert.equal(trackerMesh.material,cachedHighlight);highlightComponent(null);
 console.log(JSON.stringify({trackerSensors,instrumentAssemblyParts,sunSensors,torquerParts,highlightRestoresMaterials:true}));
-showSatelliteInterior();let hidden=0;root.traverse(o=>{if(o.isMesh&&!o.visible)hidden++});assert(hidden>0);showSatellite();let restored=0;root.traverse(o=>{if(o.isMesh&&!o.visible)restored++});assert.equal(restored,0);
+const enclosureWalls=['P21','P22','P31','P32','P61','P121','Concentrator_Sunshades_step','Concentrator_Sunshades_step_1','Concentrator_Sunshades_step_2'];
+showSatelliteInterior();let hidden=0;root.traverse(o=>{if(o.isMesh&&!o.visible)hidden++});assert(hidden>0);
+for(const name of enclosureWalls){const wall=root.getObjectByName(name);assert(wall,'Enclosure wall '+name);assert.equal(wall.visible,false);}
+assert(root.getObjectByName('Six_OB_B1').visible);root.traverse(mesh=>{if(mesh.isMesh&&getComponentFromObject(mesh)==='sunSensor')assert(mesh.visible);});
+showSatellite();let restored=0;root.traverse(o=>{if(o.isMesh&&!o.visible)restored++});assert.equal(restored,0);
+for(const name of enclosureWalls)assert(root.getObjectByName(name).visible);
+const satelliteCenter=new THREE.Box3().setFromObject(root).getCenter(new THREE.Vector3());
+const detailCamera=new THREE.PerspectiveCamera(20,1.3,.02,20);
+for(const [direction,sensorName] of [[[0,-2,0],'SunSensor_Bison64-ET-B1'],[[-2,0,0],'SunSensor_Bison64-ET-B2'],[[0,0,-2],'SunSensor_Bison64-ET-B3'],[[0,2,0],'SunSensor_Bison64-ET-B4']]){
+ detailCamera.position.copy(satelliteCenter).add(new THREE.Vector3(...direction));
+ const focus=getComponentFocus('sunSensor',{camera:detailCamera});assert.equal(focus.focusedObject.name,sensorName);assert(focus.detailView);assert(focus.componentRadius<.04);
+ const detailControls={target:satelliteCenter.clone(),minDistance:1,maxDistance:8,update(){detailCamera.lookAt(this.target);}};
+ updateCamera(detailControls,detailCamera,focus,0);assert(detailCamera.position.distanceTo(detailControls.target)<.6);assert(detailControls.minDistance<.4);
+}
+const clickedSensor=root.getObjectByName('SunSensor_Bison64-ET-B2');assert.equal(getComponentFocus('sunSensor',{camera:detailCamera,object:clickedSensor.children[0]}).focusedObject,clickedSensor);
 const instrument=await loadInstrument(scene);assert.equal(getSelectableComponentMeshes().length,selections);showInstrument();assert.equal(root.visible,false);assert.equal(instrument.visible,true);showSatellite();assert.equal(root.visible,true);assert.equal(instrument.visible,false);
 const instrumentParts=createInstrumentComponents(instrument);const instrumentGroups={};
 for(const key of ['detectors','baffles','electronics','calibration','structure','mounts','support']) {
