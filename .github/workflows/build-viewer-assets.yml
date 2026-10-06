@@ -1,0 +1,54 @@
+name: Build viewer GLBs
+
+on:
+  push:
+    branches:
+      - perf/viewer-assets
+    paths:
+      - "src/scripts/*.source-colors.glb"
+      - "scripts/optimize-model.mjs"
+      - "verify-viewer-assets.mjs"
+      - ".github/workflows/build-viewer-assets.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  optimize:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install GLB optimization tooling
+        run: npm install --no-save @gltf-transform/core @gltf-transform/extensions @gltf-transform/functions meshoptimizer
+
+      - name: Build reduced viewer assets
+        run: |
+          node scripts/optimize-model.mjs src/scripts/Satellite.source-colors.glb src/scripts/Satellite.viewer.glb 0.3 0.002
+          node scripts/optimize-model.mjs src/scripts/Instrument.source-colors.glb src/scripts/Instrument.viewer.glb 0.3 0.002
+
+      - name: Verify hierarchy, colors, bounds and triangle reduction
+        run: node verify-viewer-assets.mjs
+
+      - name: Commit viewer assets
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/scripts/Satellite.viewer.glb src/scripts/Instrument.viewer.glb
+          if git diff --cached --quiet; then
+            echo "Viewer assets already up to date."
+          else
+            git commit -m "Build reduced viewer GLBs"
+            git push origin HEAD:perf/viewer-assets
+          fi

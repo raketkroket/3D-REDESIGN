@@ -5,8 +5,8 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { createSelectionHighlight } from "./SelectionHighlight.js";
 
-const satelliteModelUrl = new URL("../../scripts/Satellite.source-colors.glb", import.meta.url).href;
-const instrumentModelUrl = new URL("../../scripts/Instrument.source-colors.glb", import.meta.url).href;
+const satelliteModelUrl = new URL("../../scripts/Satellite.viewer.glb", import.meta.url).href;
+const instrumentModelUrl = new URL("../../scripts/Instrument.viewer.glb", import.meta.url).href;
 
 let satelliteRoot = null;
 let instrumentRoot = null;
