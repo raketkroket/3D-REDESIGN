@@ -1,6 +1,8 @@
 import * as THREE from "three";
 import { createOptics, createPartViewer } from "./components/objects/Optics.js";
 import { createInstrumentComponents } from "./components/objects/InstrumentComponents.js";
+import { createCadInstances } from "./components/objects/CadInstances.js";
+import { createRenderQuality } from "./setup/renderQuality.js";
 import TWEEN from "three/examples/jsm/libs/tween.module.js";
 import { createScene } from "./setup/scene.js";
 import { createCamera } from "./setup/camera.js";
@@ -58,6 +60,7 @@ function initializeExperience() {
 	const englishCopy = new Map(translatableElements.map((element) => [element, element.textContent]));
 	const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 	const raycaster = new THREE.Raycaster();
+	raycaster.layers.enable(1);
 	const pointer = new THREE.Vector2();
 	const viewButtons = [...document.querySelectorAll("[data-view]")];
 	const controls = createControls(camera, renderer);
@@ -80,19 +83,12 @@ function initializeExperience() {
  let lastFrameTime = null;
  let interacting = false;
  let rotationPaused = false;
- const defaultPixelRatio = Math.min(window.devicePixelRatio, 1.5);
- const interactionPixelRatio = Math.min(window.devicePixelRatio, 0.9);
+ const renderQuality = createRenderQuality(renderer);
  const toolbar = document.querySelector(".view-switcher");
  visualization.parentElement.append(toolbar, opticsPanel);
- controls.autoRotateSpeed = 0.26;
- controls.addEventListener("start", () => { interacting = true; setInteractionQuality(true); });
- controls.addEventListener("end", () => { interacting = false; setInteractionQuality(false); });
-
- function setInteractionQuality(isInteracting) {
-  const ratio = isInteracting ? interactionPixelRatio : defaultPixelRatio;
-  if (Math.abs(renderer.getPixelRatio() - ratio) > 0.01) renderer.setPixelRatio(ratio);
-  requestRender();
- }
+ controls.autoRotateSpeed = 0.32;
+ controls.addEventListener("start", () => { interacting = true; requestRender(); });
+ controls.addEventListener("end", () => { interacting = false; requestRender(); });
 
 
 	function requestRender() {
@@ -103,11 +99,16 @@ function initializeExperience() {
 	function renderFrame(time) {
 		frameRequest = null;
 		if (document.hidden || !viewerInViewport) return;
-  const delta = lastFrameTime === null ? 0 : Math.min((time - lastFrameTime) / 1000, 0.05);
+  const frameMs = lastFrameTime === null ? 0 : time - lastFrameTime;
+  const delta = Math.min(frameMs / 1000, 0.1);
   lastFrameTime = time;
   TWEEN.update(time);
   controls.autoRotate = !rotationPaused && !interacting && !reduceMotion.matches && !TWEEN.getAll().some(tween => tween.isPlaying());
   updateControls(delta);
+		const moving = controls.autoRotate || interacting || optics.isAnimating() || TWEEN.getAll().some(tween => tween.isPlaying());
+		renderQuality.update(frameMs, moving, interacting);
+		getSatellite()?.userData.cadInstances?.sync();
+		getInstrument()?.userData.cadInstances?.sync();
 		lighting.update(camera, controls.target);
 		optics.update(optics.isAnimating() ? time : 0);
 		renderer.render(scene, camera);
@@ -166,6 +167,7 @@ function initializeExperience() {
 			await loadInstrument(scene);
 			if (request !== viewRequest) return;
 			instrumentComponents ??= createInstrumentComponents(getInstrument());
+			getInstrument().userData.cadInstances ??= createCadInstances(getInstrument(), instrumentComponents.getComponent);
 			highlightComponent(null);
 			if (viewName === "instrument-interior") showInstrumentInterior();
 			else showInstrument();
@@ -216,6 +218,7 @@ function initializeExperience() {
 	loadSatellite(scene, {
 		onLoad: (satelliteModel) => {
 			if (!satelliteModel) return;
+			satelliteModel.userData.cadInstances = createCadInstances(satelliteModel, getComponentFromObject);
 			if (import.meta.env.DEV) {
 				window.__nebulaDebug.materialMap = getSatelliteMaterialMap();
 			}
