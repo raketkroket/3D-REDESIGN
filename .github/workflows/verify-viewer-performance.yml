@@ -1,0 +1,31 @@
+name: Verify viewer performance
+
+on:
+  push:
+    branches:
+      - perf/viewer-assets
+    paths:
+      - "src/**"
+      - "verify-*.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/verify-viewer-performance.yml"
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: node verify-viewer-assets.mjs
+      - run: node verify-models.mjs
+      - run: node verify-performance.mjs
+      - run: node verify-optics.mjs
+      - run: npm run build
