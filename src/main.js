@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { opticalComponents } from "./components/objects/OpticalComponents.js";
 import { createMotionDetail } from "./components/objects/MotionDetail.js";
 import { createOptics, createPartViewer } from "./components/objects/Optics.js";
 import { createInstrumentComponents } from "./components/objects/InstrumentComponents.js";
@@ -195,7 +196,7 @@ function initializeExperience() {
    if (getSatellite()) getSatellite().visible = false;
    if (getInstrument()) getInstrument().visible = false;
    parts.show(part);
-	parts.highlightAll();
+	parts.clearSelection();
    frameModelRoot(camera, controls, part, {padding:1.1});
   }
   activeView = viewName;
@@ -204,7 +205,11 @@ function initializeExperience() {
 		instrumentDetailsPanel.hidden = !instrumentView;
 		document.querySelector(".experience").classList.toggle("instrument-view", instrumentView);
   opticalSelection.hidden = true;
-  opticsPanel.querySelector('.optical-components').hidden = !["mirror","rays"].includes(viewName);
+  opticsPanel.querySelector('.optical-components').hidden = !["mirror","rays","parts"].includes(viewName);
+  opticsPanel.querySelectorAll('[data-optical-component]').forEach(button => {
+   button.hidden = viewName === "parts" && !opticalComponents[button.dataset.opticalComponent]?.cadPart;
+   button.setAttribute("aria-pressed", "false");
+  });
   const optical = ["mirror", "rays", "parts"].includes(viewName);
   opticsPanel.hidden = !optical;
   document.querySelector(".experience").classList.toggle("optical-view", optical);
@@ -433,18 +438,27 @@ function initializeExperience() {
    : (rotationPaused ? "Resume rotation" : "Pause rotation");
  }
  rotationButton.addEventListener("click", () => { rotationPaused = !rotationPaused;rotationButton.setAttribute("aria-pressed",String(rotationPaused));updateRotationLabel();requestRender(); });
- const opticalCopy = {
- primary: ["Primary mirror", "The first shallow-angle reflection redirects incoming X-rays toward the secondary mirror."],
- secondary: ["Secondary mirror", "The second reflection directs the X-rays toward the focal point on the detector."],
- detector: ["Detector", "At the focal point the detector records the arriving X-rays."],
- tube: ["Stray-light tube", "This tube helps block light entering from the side before the X-rays reach the detector."],
- rays: ["X-ray path", "Yellow lines explain the radiation path: incoming rays, first reflection, second reflection, detector. This is a schematic, not visible light."]
- };
  const opticalSelection = document.querySelector("#optical-selection");
- function explainOptics(key) { const copy=opticalCopy[key];if(!copy)return;opticalSelection.textContent=copy[0]+": "+copy[1];opticalSelection.hidden=false; }
- function selectOpticalComponent(key) { optics.select(key); explainOptics(key); requestRender(); }
- document.querySelectorAll("[data-optical-component]").forEach(button => button.addEventListener("click",()=>selectOpticalComponent(button.dataset.opticalComponent)));
- partSelect.addEventListener("change", () => applyView("parts").catch(() => { selectionStatus.textContent = "CAD part could not be loaded."; }));
+ const opticalButtons = document.querySelectorAll("[data-optical-component]");
+ opticalButtons.forEach(button => { button.textContent = opticalComponents[button.dataset.opticalComponent].label; });
+ Array.from(partSelect.options).forEach(option => { option.textContent=opticalComponents[option.value].label; });
+ function explainOptics(key) {
+  const component=opticalComponents[key];if(!component)return;
+  opticalSelection.textContent=component.label+": "+component.description;opticalSelection.hidden=false;
+  opticalButtons.forEach(button=>button.setAttribute("aria-pressed",String(button.dataset.opticalComponent===key)));
+ }
+ async function selectOpticalComponent(key) {
+  const component=opticalComponents[key];if(!component)return;
+  if(activeView==="parts") {
+   if(!component.cadPart)return;
+   if(parts.getActive()?.userData.opticalComponent!==key) { partSelect.value=component.cadPart;await applyView("parts"); }
+   if(activeView!=="parts" || parts.getActive()?.userData.opticalComponent!==key)return;
+   parts.highlightAll();
+  } else optics.select(key);
+  explainOptics(key);requestRender();
+ }
+ opticalButtons.forEach(button=>button.addEventListener("click",()=>selectOpticalComponent(button.dataset.opticalComponent).catch(()=>{selectionStatus.textContent="CAD part could not be loaded.";})));
+ partSelect.addEventListener("change", () => selectOpticalComponent(partSelect.value).catch(() => { selectionStatus.textContent = "CAD part could not be loaded."; }));
  playButton.addEventListener("click", () => {
   rayPlaying = !rayPlaying;
   optics.setPlaying(rayPlaying && !reduceMotion.matches);
@@ -498,7 +512,7 @@ function initializeExperience() {
    const root=parts.getActive();
    if(!root)return;
    const hit=raycaster.intersectObject(root,true).find(hit=>isObjectVisible(hit.object));
-	if(hit){parts.highlight([hit.object]);opticsPanel.hidden=false;opticsPanel.querySelectorAll('p:not(#optical-selection),label,select,.optical-components,#ray-play').forEach(element=>element.hidden=true);opticalSelection.hidden=false;opticalSelection.textContent="CAD part: "+(hit.object.name||hit.object.parent?.name||"Unnamed part")+". Name from the supplied CAD model.";requestRender();}
+	if(hit) selectOpticalComponent(parts.getComponent(hit.object)).catch(()=>{selectionStatus.textContent="CAD part could not be loaded.";});
    return;
   }
   if (!satellite) return;

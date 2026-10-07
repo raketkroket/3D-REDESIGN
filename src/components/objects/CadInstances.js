@@ -36,7 +36,21 @@ export function createCadInstances(root, getComponent) {
   batches.push({ mesh, entries, instanced: true });
  }
  for (const entries of unique.values()) {
-  const parts = entries.map(entry => entry.mesh.geometry.clone().applyMatrix4(entry.matrix));
+  const parts = entries.map(entry => {
+   const geometry = entry.mesh.geometry.clone();
+   // Decode compressed CAD attributes before baking translations. Int16
+   // normalized coordinates cannot store transformed values outside [-1,1].
+   for (const [name, attribute] of Object.entries(geometry.attributes)) {
+    const values = new Float32Array(attribute.count * attribute.itemSize);
+    for (let i = 0; i < attribute.count; i++) {
+     for (let component = 0; component < attribute.itemSize; component++) {
+      values[i * attribute.itemSize + component] = attribute.getComponent(i, component);
+     }
+    }
+    geometry.setAttribute(name, new THREE.Float32BufferAttribute(values, attribute.itemSize));
+   }
+   return geometry.applyMatrix4(entry.matrix);
+  });
   const geometry = parts.length === 1 ? parts[0] : mergeGeometries(parts);
   if (!geometry) { parts.forEach(p => p.dispose()); continue; }
   const mesh = new THREE.Mesh(geometry, entries[0].mesh.material);
