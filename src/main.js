@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { createMotionDetail } from "./components/objects/MotionDetail.js";
 import { createOptics, createPartViewer } from "./components/objects/Optics.js";
 import { createInstrumentComponents } from "./components/objects/InstrumentComponents.js";
 import { createCadInstances } from "./components/objects/CadInstances.js";
@@ -85,6 +86,8 @@ function initializeExperience() {
  let interacting = false;
  let rotationPaused = false;
  const renderQuality = createRenderQuality(renderer);
+ const motionDetail = createMotionDetail();
+ let cadState = null;
  const toolbar = document.querySelector(".view-switcher");
  visualization.parentElement.append(toolbar, opticsPanel);
  controls.autoRotateSpeed = 0.32;
@@ -108,10 +111,15 @@ function initializeExperience() {
   updateControls(delta);
 		const moving = controls.autoRotate || interacting || optics.isAnimating() || TWEEN.getAll().some(tween => tween.isPlaying());
 		renderQuality.update(frameMs, moving, interacting);
-		getSatellite()?.userData.cadInstances?.sync();
-		getInstrument()?.userData.cadInstances?.sync();
+		const nextCadState = `${activeView}/${selectedComponent}/${selectedInstrumentComponent}`;
+        if (nextCadState !== cadState) {
+            getSatellite()?.userData.cadInstances?.sync();
+            getInstrument()?.userData.cadInstances?.sync();
+            cadState = nextCadState;
+        }
+        motionDetail.update([getSatellite(), getInstrument()], moving);
 		lighting.update(camera, controls.target);
-		optics.update(optics.isAnimating() ? time : 0);
+		if (optics.isAnimating()) optics.update(time);
 		renderer.render(scene, camera);
 		if (controls.autoRotate || optics.isAnimating() || TWEEN.getAll().some((tween) => tween.isPlaying())) requestRender();
 	}
@@ -125,7 +133,7 @@ function initializeExperience() {
 
 
 	if (import.meta.env.DEV) {
-		window.__nebulaDebug = { scene, camera, controls, renderer };
+		window.__nebulaDebug = { scene, camera, controls, renderer, motionDetail };
 	}
 
 	function frameCurrentModel(viewName) {

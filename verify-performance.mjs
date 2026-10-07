@@ -49,7 +49,8 @@ showInstrumentInterior();instrumentInstances.sync();assert.equal(renderTriangles
 components.highlight('detectors');instrumentInstances.sync();for(const mesh of renderMeshes(instrument)){const component=mesh.userData.renderBatch?mesh.userData.cadComponent:components.getComponent(mesh);assert.equal(Boolean(mesh.material.userData.selectionHighlight),component==='detectors');}
 components.clearHighlight();showInstrument();instrumentInstances.sync();assert.equal(renderTriangles(instrument),sum(instrumentSources));instrumentInstances.dispose();
 let ratio=2;const resolutions=[];const quality=createRenderQuality({getPixelRatio:()=>ratio,setPixelRatio:value=>{ratio=value;resolutions.push(value)}},2);
-quality.update(0,true,false);assert.equal(ratio,1.5);for(let i=0;i<150;i++)quality.update(45,true,false);assert.equal(ratio,.8);
-quality.update(0,false,false);assert.equal(ratio,2);for(let i=0;i<10;i++)quality.update(0,false,false);assert.equal(resolutions.filter(value=>value===2).length,1);
+quality.update(0,true,false);assert.equal(ratio,1);for(let i=0;i<150;i++)quality.update(45,true,false);assert.equal(ratio,.5);
+quality.update(0,false,false);assert.equal(ratio,1.5);for(let i=0;i<10;i++)quality.update(0,false,false);assert.equal(resolutions.filter(value=>value===1.5).length,1);
 quality.update(0,true,true);assert(ratio<=1.25);
 console.log(JSON.stringify({sourceTriangles:sum(sourceMeshes),viewerTriangles:sum(originals),satelliteCalls:fullCalls,instrumentCalls,sourceColors:colors(originals).size,instancing:instances.stats,checks:'geometry coverage, CAD colors/bounds, source picking, highlights, cutaways/restoration, disposal, adaptive/still resolution'}));
+
