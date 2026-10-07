@@ -20,8 +20,10 @@ export function createOptics(scene) {
     const marker=new THREE.Mesh(new THREE.SphereGeometry(.026,8,6),new THREE.MeshBasicMaterial({color:0xfff5b1}));marker.userData.component="rays";rays.add(marker);markers.push(marker);
   }
  }
- const detector=new THREE.Mesh(new THREE.CylinderGeometry(.12,.12,.05,32),new THREE.MeshStandardMaterial({color:0x75c8ff,emissive:0x155577,roughness:.45}));detector.userData.component="detector";detector.position.y=-2.5;root.add(detector);
+ const detector=new THREE.Mesh(new THREE.CylinderGeometry(.12,.12,.05,32),new THREE.MeshStandardMaterial({color:0x75c8ff,emissive:0x155577,roughness:.45}));detector.userData.component="fpm";detector.position.y=-2.5;root.add(detector);
  const tube=new THREE.Mesh(new THREE.CylinderGeometry(.2,.25,.6,32,1,true,Math.PI/2,Math.PI),shellMaterial);tube.userData.component="tube";tube.position.y=-2.02;root.add(tube);
+ const cameraHousing=new THREE.Mesh(new THREE.CylinderGeometry(.19,.19,.12,32,1,true),shellMaterial);
+ cameraHousing.userData.component="fpcm";cameraHousing.position.y=-2.5;root.add(cameraHousing);
  root.add(rays);scene.add(root);
  const selection=createSelectionHighlight(root,{ghostOpacity:.16});
  const selectableMeshes=component=>{const meshes=[];root.traverse(object=>{if((object.isMesh||object.isLine)&&object.userData.component===component)meshes.push(object);});return meshes;};
@@ -35,9 +37,10 @@ const partUrls={fpm:new URL('../../assets/cad/fpm.glb',import.meta.url).href,fpc
 export function createPartViewer(scene) {
  const cache=new Map();const highlights=new Map();let active=null;
  const getHighlight=root=>{if(!highlights.has(root))highlights.set(root,createSelectionHighlight(root,{ghostOpacity:.16}));return highlights.get(root);};
- return {getActive(){return active;},hide(){if(active){highlights.get(active)?.clear();active.visible=false;}},async load(key){
+ return {getComponent(mesh){return mesh?.userData.opticalComponent ?? active?.userData.opticalComponent;},getActive(){return active;},hide(){if(active){highlights.get(active)?.clear();active.visible=false;}},async load(key){
   if(!partUrls[key])throw new Error('Unknown CAD part');
-  if(!cache.has(key)){const loader=new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);cache.set(key,loader.loadAsync(partUrls[key]).then(gltf=>{const root=gltf.scene;root.visible=false;scene.add(root);getHighlight(root);return root;}).catch(error=>{cache.delete(key);throw error;}));}
+  if(!cache.has(key)){const loader=new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);cache.set(key,loader.loadAsync(partUrls[key]).then(gltf=>{const root=gltf.scene;root.userData.opticalComponent=key;root.traverse(object=>{if(object.isMesh)object.userData.opticalComponent=key});root.visible=false;scene.add(root);getHighlight(root);return root;}).catch(error=>{cache.delete(key);throw error;}));}
   return cache.get(key);
  },show(root){this.hide();active=root;root.visible=true;},highlight(meshes){if(active)getHighlight(active).apply(meshes);},highlightAll(){if(!active)return;const meshes=[];active.traverse(object=>{if(object.isMesh)meshes.push(object);});getHighlight(active).apply(meshes);},clearSelection(){if(active)highlights.get(active)?.clear();}};
 }
+

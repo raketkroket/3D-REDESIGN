@@ -213,12 +213,17 @@ function prepareModelMaterials(root, applyReferenceAppearance) {
 
 		if (category !== "OTHER") object.material = visualCategories[category];
 		else {
-			// Keep STEP base colors, but soften its all-metal export defaults.
+			// Preserve STEP colors with a reflective metal finish and softer coatings.
 			const materials = importedMaterials.map((source) => {
 				if (!displayMaterials.has(source)) {
 					const material = source.clone();
-					material.metalness = Math.min(material.metalness, 0.5);
-					material.roughness = THREE.MathUtils.clamp(material.roughness, 0.35, 0.46);
+					const { r, g, b } = material.color;
+                    const neutral = Math.max(r,g,b) - Math.min(r,g,b) < 0.035;
+                    const dark = Math.max(r,g,b) < 0.08;
+                    material.metalness = neutral && !dark ? 0.72 : 0.28;
+                    material.roughness = dark ? 0.46 : neutral ? 0.30 : 0.40;
+                    material.envMapIntensity = 0.9;
+
 					displayMaterials.set(source, material);
 				}
 				return displayMaterials.get(source);
@@ -582,3 +587,4 @@ export function resetSatellite(duration = 1500) {
 			.start();
 	}
 }
+

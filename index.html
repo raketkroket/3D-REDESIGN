@@ -59,8 +59,8 @@
           <p data-i18n-nl="Schematische doorsnede; afmetingen en hoeken zijn illustratief. De gele lijnen tonen de stralingsweg, niet zichtbaar licht.">Schematic cutaway; dimensions and angles are illustrative. Yellow lines represent the radiation path, not visible light.</p>
           <button type="button" id="ray-play" aria-pressed="false" data-i18n-nl="Animatie aan/uit">Play / pause X-rays</button>
           <label for="cad-part" data-i18n-nl="Los CAD-onderdeel">Individual CAD part</label>
-          <select id="cad-part"><option value="primary">Primary concentrator structure</option><option value="secondary">Secondary concentrator structure</option><option value="fpm">FPM</option><option value="fpcm">FPCM</option></select>
-          <div class="optical-components" aria-label="Optical components"><button type="button" data-optical-component="primary">Primary mirror</button><button type="button" data-optical-component="secondary">Secondary mirror</button><button type="button" data-optical-component="tube">Tube</button><button type="button" data-optical-component="detector">Detector</button><button type="button" data-optical-component="rays">X-rays</button></div>
+          <select id="cad-part"><option value="primary">Primary mirror</option><option value="secondary">Secondary mirror</option><option value="fpm">FPM / detector</option><option value="fpcm">FPCM / camera module</option></select>
+          <div class="optical-components" aria-label="Optical components"><button type="button" data-optical-component="primary">Primary mirror</button><button type="button" data-optical-component="secondary">Secondary mirror</button><button type="button" data-optical-component="tube">Tube</button><button type="button" data-optical-component="fpm">FPM / detector</button><button type="button" data-optical-component="fpcm">FPCM / camera module</button><button type="button" data-optical-component="rays">X-rays</button></div>
           <p id="optical-selection" aria-live="polite" hidden></p>
           <p id="cad-note" data-i18n-nl="CAD-onderdelen worden afzonderlijk getoond, met hun bronkleuren. De aangeleverde concentratorbestanden beschrijven de testconfiguratie van juni 2026; mandrels zijn productiegereedschap.">CAD parts are shown individually with source colors. The supplied concentrator files describe the June 2026 test configuration; mandrels are manufacturing tools.</p>
         </section>
@@ -131,3 +131,4 @@
 </body>
 
 </html>
+

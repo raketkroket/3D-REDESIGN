@@ -5,13 +5,13 @@ export function createLights(scene, renderer) {
     const room = new RoomEnvironment();
     const generator = new THREE.PMREMGenerator(renderer);
     scene.environment = generator.fromScene(room, 0.04).texture;
-    scene.environmentIntensity = 0.5;
+    scene.environmentIntensity = 0.65;
     generator.dispose();
     room.dispose();
-    const hemisphere = new THREE.HemisphereLight(0xdfe8f2, 0x677487, 0.32);
-    const key = new THREE.DirectionalLight(0xffffff, 2.7);
-    const fill = new THREE.DirectionalLight(0xf0f4ff, 0.5);
-    const rim = new THREE.DirectionalLight(0xe8f1ff, 1.1);
+    const hemisphere = new THREE.HemisphereLight(0xdfe8f2, 0x253140, 0.18);
+    const key = new THREE.DirectionalLight(0xfff4e8, 1.9);
+    const fill = new THREE.DirectionalLight(0xd3e1f2, 0.45);
+    const rim = new THREE.DirectionalLight(0xd7e8ff, 1.2);
     const offsets = [
         [key, new THREE.Vector3(-3, 4, 6)],
         [fill, new THREE.Vector3(4, 1, 3)],
@@ -28,3 +28,4 @@ export function createLights(scene, renderer) {
         },
     };
 }
+

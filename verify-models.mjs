@@ -56,7 +56,8 @@ for(const key of ['detectors','baffles','electronics','calibration','structure',
  const meshes=instrumentParts.getMeshes(key);assert(meshes.length>0);instrumentGroups[key]=meshes.length;
  const original=meshes[0].material;instrumentParts.highlight(key);assert.notEqual(meshes[0].material,original);instrumentParts.clearHighlight();assert.equal(meshes[0].material,original);
 }
-instrument.traverse(mesh=>{if(!mesh.isMesh)return;assert(instrumentParts.getComponent(mesh));assert(mesh.material.metalness<=.5);if(mesh.name.startsWith('Sensor_'))assert.equal(instrumentParts.getComponent(mesh),'detectors');if(mesh.parent?.name.startsWith('Science_baffle'))assert.equal(instrumentParts.getComponent(mesh),'baffles');});
+instrument.traverse(mesh=>{if(!mesh.isMesh)return;assert(instrumentParts.getComponent(mesh));assert(mesh.material.metalness>=.28&&mesh.material.metalness<=.72);assert(mesh.material.roughness>=.30&&mesh.material.roughness<=.46);if(mesh.name.startsWith('Sensor_'))assert.equal(instrumentParts.getComponent(mesh),'detectors');if(mesh.parent?.name.startsWith('Science_baffle'))assert.equal(instrumentParts.getComponent(mesh),'baffles');});
 showInstrumentInterior();assert.equal(instrumentParts.getMeshes('structure').filter(mesh=>!mesh.visible).length,6);showInstrument();assert(instrumentParts.getMeshes('structure').every(mesh=>mesh.visible));showSatellite();
 console.log(JSON.stringify({instrumentGroups,sourceColors:colors.size,interiorPanelsRestore:true}));
 console.log(JSON.stringify({meshes,triangles,colors:colors.size,mapped,hidden,selections,view:getCurrentView()}));
+
