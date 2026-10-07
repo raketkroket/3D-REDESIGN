@@ -15,7 +15,7 @@ export function createRenderer() {
             powerPreference: 'high-performance'
         });
 
-        const maximumPixelRatio = 2;
+        const maximumPixelRatio = 1.5;
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, maximumPixelRatio));
         renderer.outputColorSpace = THREE.SRGBColorSpace;
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -26,3 +26,4 @@ export function createRenderer() {
         return null;
     }
 }
+
