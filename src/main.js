@@ -11,6 +11,7 @@ import { createControls, updateControls } from "./setup/controls.js";
 import { createLights } from "./components/lights/lights.js";
 import {
 	frameModelRoot,
+	getModelStats,
 	getSatellite,
 	getSatelliteMaterialMap,
 	getInstrument,
@@ -218,6 +219,9 @@ function initializeExperience() {
 	loadSatellite(scene, {
 		onLoad: (satelliteModel) => {
 			if (!satelliteModel) return;
+            const bounds = getModelStats(satelliteModel);
+            starfield.position.copy(bounds.center);
+            starfield.scale.setScalar(bounds.radius / 4.5);
 			satelliteModel.userData.cadInstances = createCadInstances(satelliteModel, getComponentFromObject);
 			if (import.meta.env.DEV) {
 				window.__nebulaDebug.materialMap = getSatelliteMaterialMap();
@@ -233,7 +237,7 @@ function initializeExperience() {
 		onError: activateFallback,
 	});
 
-	createStars(6500, scene);
+	const starfield = createStars(14000, scene);
 
 	function resizeRenderer() {
 		const { width, height } = visualization.getBoundingClientRect();
@@ -501,3 +505,4 @@ try {
 } catch {
 	document.documentElement.classList.remove("js-enhanced");
 }
+
