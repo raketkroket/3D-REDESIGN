@@ -44,10 +44,11 @@ for(const mesh of originals)assert.equal(mesh.material,savedMaterials.get(mesh))
 instances.dispose();assert.equal(renderMeshes(root).length,originals.length);
 const instrument=await loadInstrument(scene);showInstrument();const instrumentSources=[];instrument.traverse(mesh=>{if(mesh.isMesh)instrumentSources.push(mesh)});
 const components=createInstrumentComponents(instrument),instrumentInstances=createCadInstances(instrument,components.getComponent);
-assert.equal(renderTriangles(instrument),sum(instrumentSources));const instrumentCalls=renderMeshes(instrument).length;assert(instrumentCalls<instrumentSources.length*.25);
-showInstrumentInterior();instrumentInstances.sync();assert.equal(renderTriangles(instrument),sum(instrumentSources.filter(mesh=>mesh.visible)));
+const visibleInstrumentSources=()=>instrumentSources.filter(mesh=>mesh.visible);
+assert.equal(renderTriangles(instrument),sum(visibleInstrumentSources()));const instrumentCalls=renderMeshes(instrument).length;assert(instrumentCalls<instrumentSources.length*.25);
+showInstrumentInterior();instrumentInstances.sync();assert.equal(renderTriangles(instrument),sum(visibleInstrumentSources()));
 components.highlight('detectors');instrumentInstances.sync();for(const mesh of renderMeshes(instrument)){const component=mesh.userData.renderBatch?mesh.userData.cadComponent:components.getComponent(mesh);assert.equal(Boolean(mesh.material.userData.selectionHighlight),component==='detectors');}
-components.clearHighlight();showInstrument();instrumentInstances.sync();assert.equal(renderTriangles(instrument),sum(instrumentSources));instrumentInstances.dispose();
+components.clearHighlight();showInstrument();instrumentInstances.sync();assert.equal(renderTriangles(instrument),sum(visibleInstrumentSources()));instrumentInstances.dispose();
 let ratio=2;const resolutions=[];const quality=createRenderQuality({getPixelRatio:()=>ratio,setPixelRatio:value=>{ratio=value;resolutions.push(value)}},2);
 quality.update(0,true,false);assert.equal(ratio,1.5);for(let i=0;i<150;i++)quality.update(45,true,false);assert.equal(ratio,.8);
 quality.update(0,false,false);assert.equal(ratio,2);for(let i=0;i<10;i++)quality.update(0,false,false);assert.equal(resolutions.filter(value=>value===2).length,1);

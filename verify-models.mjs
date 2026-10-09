@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {loadSatellite,loadInstrument,getSatellite,getComponentFocus,getSelectableComponentMeshes,getComponentFromObject,highlightComponent,showSatelliteInterior,showSatellite,showInstrument,getCurrentView} from './src/components/objects/Satellite.js';
 import {showInstrumentInterior} from './src/components/objects/Satellite.js';
-import {createInstrumentComponents} from './src/components/objects/InstrumentComponents.js';
+import {createInstrumentComponents,isFpcmVariant} from './src/components/objects/InstrumentComponents.js';
 import {updateCamera} from './src/scripts/updateCamera.js';
 globalThis.ProgressEvent=class {constructor(type,init){Object.assign(this,init)}};
 globalThis.self=globalThis;
@@ -51,12 +51,15 @@ for(const [direction,sensorName] of [[[0,-2,0],'SunSensor_Bison64-ET-B1'],[[-2,0
 }
 const clickedSensor=root.getObjectByName('SunSensor_Bison64-ET-B2');assert.equal(getComponentFocus('sunSensor',{camera:detailCamera,object:clickedSensor.children[0]}).focusedObject,clickedSensor);
 const instrument=await loadInstrument(scene);assert.equal(getSelectableComponentMeshes().length,selections);showInstrument();assert.equal(root.visible,false);assert.equal(instrument.visible,true);showSatellite();assert.equal(root.visible,true);assert.equal(instrument.visible,false);
+let fpmMeshes=0,fpcmMeshes=0;
+instrument.traverse(mesh=>{if(!mesh.isMesh)return;if(isFpcmVariant(mesh)){fpcmMeshes++;assert.equal(mesh.visible,false);}else if(/fpm_/i.test(mesh.parent?.name??''))fpmMeshes++;});
+assert(fpmMeshes>0);assert(fpcmMeshes>0);
 const instrumentParts=createInstrumentComponents(instrument);const instrumentGroups={};
-for(const key of ['detectors','baffles','electronics','calibration','structure','mounts','support']) {
+for(const key of ['detectors','baffles','electronics','structure','mounts','support']) {
  const meshes=instrumentParts.getMeshes(key);assert(meshes.length>0);instrumentGroups[key]=meshes.length;
  const original=meshes[0].material;instrumentParts.highlight(key);assert.notEqual(meshes[0].material,original);instrumentParts.clearHighlight();assert.equal(meshes[0].material,original);
 }
-instrument.traverse(mesh=>{if(!mesh.isMesh)return;assert(instrumentParts.getComponent(mesh));assert(mesh.material.metalness<=.5);if(mesh.name.startsWith('Sensor_'))assert.equal(instrumentParts.getComponent(mesh),'detectors');if(mesh.parent?.name.startsWith('Science_baffle'))assert.equal(instrumentParts.getComponent(mesh),'baffles');});
+instrument.traverse(mesh=>{if(!mesh.isMesh)return;if(isFpcmVariant(mesh)){assert.equal(instrumentParts.getComponent(mesh),undefined);return;}assert(instrumentParts.getComponent(mesh));assert(mesh.material.metalness<=.5);if(mesh.name.startsWith('Sensor_'))assert.equal(instrumentParts.getComponent(mesh),'detectors');if(mesh.parent?.name.startsWith('Science_baffle'))assert.equal(instrumentParts.getComponent(mesh),'baffles');});
 showInstrumentInterior();assert.equal(instrumentParts.getMeshes('structure').filter(mesh=>!mesh.visible).length,6);showInstrument();assert(instrumentParts.getMeshes('structure').every(mesh=>mesh.visible));showSatellite();
-console.log(JSON.stringify({instrumentGroups,sourceColors:colors.size,interiorPanelsRestore:true}));
+console.log(JSON.stringify({instrumentGroups,fpmMeshes,fpcmMeshes,sourceColors:colors.size,interiorPanelsRestore:true}));
 console.log(JSON.stringify({meshes,triangles,colors:colors.size,mapped,hidden,selections,view:getCurrentView()}));

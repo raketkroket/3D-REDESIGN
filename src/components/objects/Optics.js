@@ -8,20 +8,23 @@ import { createSelectionHighlight } from './SelectionHighlight.js';
 export function createOptics(scene) {
  const root = new THREE.Group(); root.name = 'WolterExplanation'; root.visible = false;
  const rays = new THREE.Group(); const markers = []; const paths = [];
- const shellMaterial = new THREE.MeshStandardMaterial({color:0xbad3e7,metalness:.25,roughness:.45,side:THREE.DoubleSide});
+ const primaryMaterial = new THREE.MeshStandardMaterial({color:0x9fc4db,metalness:.25,roughness:.45,side:THREE.DoubleSide});
+ const secondaryMaterial = new THREE.MeshStandardMaterial({color:0xd7af74,metalness:.25,roughness:.45,side:THREE.DoubleSide});
  for (const radius of [.48,.63,.78]) {
   const profile=[new THREE.Vector2(radius*1.03,1),new THREE.Vector2(radius,.45),new THREE.Vector2(radius*.92,-.2),new THREE.Vector2(radius*.87,-.55)];
-  for (const [points,component] of [[profile.slice(0,3),'primary'],[profile.slice(2),'secondary']]) {
-   const shell=new THREE.Mesh(new THREE.LatheGeometry(points,48,Math.PI/2,Math.PI),shellMaterial);shell.userData.component=component;root.add(shell);
-  }
-  for (const sign of [-1,1]) {
-   const points=[new THREE.Vector3(sign*radius,1.7,0),new THREE.Vector3(sign*radius,.45,0),new THREE.Vector3(sign*radius*.92,-.2,0),new THREE.Vector3(0,-2.5,0)];
-   const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints(points),new THREE.LineBasicMaterial({color:0xffdb67}));line.userData.component="rays";rays.add(line);paths.push(points);
-    const marker=new THREE.Mesh(new THREE.SphereGeometry(.026,8,6),new THREE.MeshBasicMaterial({color:0xfff5b1}));marker.userData.component="rays";rays.add(marker);markers.push(marker);
+  for (const [points,component,material] of [[profile.slice(0,3),'primary',primaryMaterial],[profile.slice(2),'secondary',secondaryMaterial]]) {
+   const shell=new THREE.Mesh(new THREE.LatheGeometry(points,48,Math.PI/2,Math.PI),material);shell.userData.component=component;root.add(shell);
   }
  }
+ for (const radius of [.48,.63,.78]) for (const sign of [-1,1]) paths.push([new THREE.Vector3(sign*radius,1.7,0),new THREE.Vector3(sign*radius,.45,0),new THREE.Vector3(sign*radius*.92,-.2,0),new THREE.Vector3(0,-2.5,0)]);
+ for (const [stage,color] of [["incoming",0x72cfff],["primary-reflection",0xffd476],["secondary-reflection",0xff8f70]]) {
+  const positions=[];for(const points of paths)positions.push(...points[stage==="incoming"?0:stage==="primary-reflection"?1:2].toArray(),...points[stage==="incoming"?1:stage==="primary-reflection"?2:3].toArray());
+  const line=new THREE.LineSegments(new THREE.BufferGeometry().setAttribute("position",new THREE.Float32BufferAttribute(positions,3)),new THREE.LineBasicMaterial({color}));
+  line.userData.component="rays";line.userData.rayStage=stage;rays.add(line);
+ }
+ for (const points of paths) { const marker=new THREE.Mesh(new THREE.SphereGeometry(.026,8,6),new THREE.MeshBasicMaterial({color:0xfff5b1}));marker.userData.component="rays";rays.add(marker);markers.push(marker); }
  const detector=new THREE.Mesh(new THREE.CylinderGeometry(.12,.12,.05,32),new THREE.MeshStandardMaterial({color:0x75c8ff,emissive:0x155577,roughness:.45}));detector.userData.component="detector";detector.position.y=-2.5;root.add(detector);
- const tube=new THREE.Mesh(new THREE.CylinderGeometry(.2,.25,.6,32,1,true,Math.PI/2,Math.PI),shellMaterial);tube.userData.component="tube";tube.position.y=-2.02;root.add(tube);
+ const tube=new THREE.Mesh(new THREE.CylinderGeometry(.2,.25,.6,32,1,true,Math.PI/2,Math.PI),primaryMaterial);tube.userData.component="tube";tube.position.y=-2.02;root.add(tube);
  root.add(rays);scene.add(root);
  const selection=createSelectionHighlight(root,{ghostOpacity:.16});
  const selectableMeshes=component=>{const meshes=[];root.traverse(object=>{if((object.isMesh||object.isLine)&&object.userData.component===component)meshes.push(object);});return meshes;};
@@ -31,7 +34,7 @@ export function createOptics(scene) {
  }};
 }
 
-const partUrls={fpm:new URL('../../assets/cad/fpm.glb',import.meta.url).href,fpcm:new URL('../../assets/cad/fpcm.glb',import.meta.url).href,primary:new URL('../../assets/cad/primary.glb',import.meta.url).href,secondary:new URL('../../assets/cad/secondary.glb',import.meta.url).href};
+const partUrls={fpm:new URL('../../assets/cad/fpm.glb',import.meta.url).href,primary:new URL('../../assets/cad/primary.glb',import.meta.url).href,secondary:new URL('../../assets/cad/secondary.glb',import.meta.url).href};
 export function createPartViewer(scene) {
  const cache=new Map();const highlights=new Map();let active=null;
  const getHighlight=root=>{if(!highlights.has(root))highlights.set(root,createSelectionHighlight(root,{ghostOpacity:.16}));return highlights.get(root);};

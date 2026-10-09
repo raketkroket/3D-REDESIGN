@@ -27,6 +27,14 @@ Goal
 
 The main goal of this project is to make complex space technology more accessible and enjoyable by combining education with interactive design.
 
+### Replacing supplied CAD models
+
+The presentation loads the satellite from `src/scripts/Satellite.source-colors.glb` and the X-ray instrument from `src/scripts/Instrument.source-colors.glb`. Replace those files with exported, Meshopt-compressed GLBs when the updated STEP files arrive; retain the source filenames to preserve the current loading and interaction flow.
+
+The satellite importer maps the component identifiers `xrayInstrument`, `starTrackerModule`, `dawn4UCubeDrive`, `sBandAntenna`, `sunSensor`, `magnetorquers`, and `solarPanel` from the CAD hierarchy in `src/components/objects/Satellite.js`. Keep the corresponding group-name prefixes in the export, or update that single mapping after verifying click selection. The instrument view keeps the `FPM_(Last)` hierarchy visible and deliberately excludes `FPCM_(Last)` presentation variants.
+
+Run `node verify-models.mjs`, `node verify-performance.mjs`, and `node verify-optics.mjs` after an import. They check CAD color preservation, bounds, component selection, cutaway restoration, instancing, adaptive resolution, and the optical explainer.
+
 
 https://github.com/user-attachments/assets/48dab2d1-1ea3-45cf-8552-8d4928064c60
 

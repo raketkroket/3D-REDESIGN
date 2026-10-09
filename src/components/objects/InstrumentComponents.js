@@ -1,13 +1,21 @@
 import * as THREE from "three";
 import { createSelectionHighlight } from "./SelectionHighlight.js";
 
-// These groups follow the names in the supplied instrument assembly.
-function componentForMesh(mesh) {
+function getObjectPath(mesh) {
 	const names = [];
 	for (let object = mesh; object; object = object.parent) {
 		names.push(object.name.toLowerCase().replace(/[\s:.-]+/g, "_"));
 	}
-	const path = names.join(" ");
+	return names.join(" ");
+}
+
+export function isFpcmVariant(mesh) {
+	return /fpcm_/.test(getObjectPath(mesh));
+}
+
+// These groups follow the names in the supplied instrument assembly.
+function componentForMesh(mesh) {
+	const path = getObjectPath(mesh);
 	if (/sandwich_panel/.test(path)) return "support";
 	if (/callibration|calibration|fe55|caltube/.test(path)) return "calibration";
 	if (/science_baffle/.test(path)) return "baffles";
@@ -23,6 +31,7 @@ export function createInstrumentComponents(root) {
 	const selection = createSelectionHighlight(root, { ghostOpacity: 0.2 });
 	root.traverse((mesh) => {
 		if (!mesh.isMesh) return;
+		if (isFpcmVariant(mesh)) return;
 		const component = componentForMesh(mesh);
 		if (!groups.has(component)) groups.set(component, []);
 		groups.get(component).push(mesh);

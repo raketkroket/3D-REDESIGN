@@ -11,6 +11,7 @@ import { createControls, updateControls } from "./setup/controls.js";
 import { createLights } from "./components/lights/lights.js";
 import {
 	frameModelRoot,
+	getModelStats,
 	getSatellite,
 	getSatelliteMaterialMap,
 	getInstrument,
@@ -41,6 +42,7 @@ function initializeExperience() {
 
 	if (!visualization || !renderer) return;
 
+	document.documentElement.classList.add("js-enhanced");
 	const scene = createScene(requestRender);
 	const camera = createCamera();
 	const canvas = renderer.domElement;
@@ -128,15 +130,24 @@ function initializeExperience() {
 	}
 
 	function frameCurrentModel(viewName) {
+		const narrowViewport = camera.aspect < 0.9;
 		if (viewName === "instrument" || viewName === "instrument-interior") {
 			const instrument = getInstrument();
-			if (instrument) frameModelRoot(camera, controls, instrument, { padding: 1.1, direction: [0.9, -0.25, 1] });
+			if (instrument) frameModelRoot(camera, controls, instrument, {
+				padding: narrowViewport ? 1.18 : 1.02,
+				direction: [0.9, -0.25, 1],
+				verticalOffset: narrowViewport ? -0.04 : -0.08,
+			});
 			return;
 		}
 
 		const satellite = getSatellite();
 		if (satellite) {
-			frameModelRoot(camera, controls, satellite, { padding: 1.12, direction: [0.8, 0.5, 1] });
+			frameModelRoot(camera, controls, satellite, {
+				padding: narrowViewport ? 1.16 : 1.04,
+				direction: [0.8, 0.5, 1],
+				verticalOffset: narrowViewport ? -0.03 : -0.05,
+			});
 		}
 	}
 
@@ -218,6 +229,9 @@ function initializeExperience() {
 	loadSatellite(scene, {
 		onLoad: (satelliteModel) => {
 			if (!satelliteModel) return;
+			const bounds = getModelStats(satelliteModel);
+			starfield.position.copy(bounds.center);
+			starfield.scale.setScalar(bounds.radius / 4.5);
 			satelliteModel.userData.cadInstances = createCadInstances(satelliteModel, getComponentFromObject);
 			if (import.meta.env.DEV) {
 				window.__nebulaDebug.materialMap = getSatelliteMaterialMap();
@@ -233,7 +247,7 @@ function initializeExperience() {
 		onError: activateFallback,
 	});
 
-	createStars(6500, scene);
+	const starfield = createStars(14000, scene);
 
 	function resizeRenderer() {
 		const { width, height } = visualization.getBoundingClientRect();
@@ -371,7 +385,6 @@ function initializeExperience() {
 		instrumentDetails.forEach((detail) => (detail.hidden = false));
 	}
 
-	document.documentElement.classList.add("js-enhanced");
 	componentDetails.forEach((detail) => (detail.hidden = true));
 
 	componentLinks.forEach((link) => {
@@ -422,11 +435,11 @@ function initializeExperience() {
  }
  rotationButton.addEventListener("click", () => { rotationPaused = !rotationPaused;rotationButton.setAttribute("aria-pressed",String(rotationPaused));updateRotationLabel();requestRender(); });
  const opticalCopy = {
- primary: ["Primary mirror", "The first shallow-angle reflection redirects incoming X-rays toward the secondary mirror."],
- secondary: ["Secondary mirror", "The second reflection directs the X-rays toward the focal point on the detector."],
+ primary: ["Primary mirror", "Blue identifies the first mirror stage. It redirects incoming X-rays toward the secondary mirror."],
+ secondary: ["Secondary mirror", "Gold identifies the second mirror stage. It directs the X-rays toward the focal point on the detector."],
  detector: ["Detector", "At the focal point the detector records the arriving X-rays."],
  tube: ["Stray-light tube", "This tube helps block light entering from the side before the X-rays reach the detector."],
- rays: ["X-ray path", "Yellow lines explain the radiation path: incoming rays, first reflection, second reflection, detector. This is a schematic, not visible light."]
+ rays: ["X-ray path", "Blue shows incoming X-rays; gold and coral show the first and second reflections toward the detector. This is a schematic, not a ray-trace simulation."]
  };
  const opticalSelection = document.querySelector("#optical-selection");
  function explainOptics(key) { const copy=opticalCopy[key];if(!copy)return;opticalSelection.textContent=copy[0]+": "+copy[1];opticalSelection.hidden=false; }

@@ -4,6 +4,7 @@ import TWEEN from "three/examples/jsm/libs/tween.module.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { createSelectionHighlight } from "./SelectionHighlight.js";
+import { isFpcmVariant } from "./InstrumentComponents.js";
 
 const satelliteModelUrl = new URL("../../scripts/Satellite.source-colors.glb", import.meta.url).href;
 const instrumentModelUrl = new URL("../../scripts/Instrument.source-colors.glb", import.meta.url).href;
@@ -231,6 +232,12 @@ function prepareModelMaterials(root, applyReferenceAppearance) {
 	return report;
 }
 
+function hidePresentationExcludedVariants(root) {
+	root.traverse((object) => {
+		if (object.isMesh && isFpcmVariant(object)) object.visible = false;
+	});
+}
+
 function setInstrumentInteriorVisibility(isInterior) {
 	if (!satelliteRoot) return;
 	satelliteRoot.traverse((object) => {
@@ -305,7 +312,7 @@ export function getModelStats(object) {
 	};
 }
 
-export function frameModelRoot(camera, controls, object, { padding = 1.6, direction } = {}) {
+export function frameModelRoot(camera, controls, object, { padding = 1.6, direction, verticalOffset = 0 } = {}) {
 	if (!object || !camera || !controls) return null;
 	const stats = getModelStats(object);
 	if (!stats) return null;
@@ -313,11 +320,13 @@ export function frameModelRoot(camera, controls, object, { padding = 1.6, direct
 	const verticalFov = THREE.MathUtils.degToRad(camera.fov);
 	const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * camera.aspect);
 	const limitingFov = Math.min(verticalFov, horizontalFov);
-	const distance = (stats.radius / Math.sin(limitingFov / 2)) * padding;
+	const offsetRadius = Math.abs(stats.size.y * verticalOffset);
+	const distance = ((stats.radius + offsetRadius) / Math.sin(limitingFov / 2)) * padding;
 	const cameraOffset = direction
 		? new THREE.Vector3(...direction).normalize().multiplyScalar(distance)
 		: new THREE.Vector3(0, stats.radius * 0.18, distance);
 	const targetPosition = stats.center.clone();
+	targetPosition.y += stats.size.y * verticalOffset;
 	const cameraPosition = targetPosition.clone().add(cameraOffset);
 
 	camera.position.copy(cameraPosition);
@@ -374,6 +383,9 @@ export function loadInstrument(scene) {
 	instrumentLoadPromise = loadModel(instrumentModelUrl, "InstrumentAssembly")
 		.then((instrument) => {
 			instrumentRoot = instrument;
+			// The supplied assembly includes an FPCM calibration variant. Keep the
+			// source geometry intact, but exclude that variant from presentation.
+			hidePresentationExcludedVariants(instrumentRoot);
 			instrumentRoot.visible = false;
 			scene.add(instrumentRoot);
 			return instrumentRoot;
