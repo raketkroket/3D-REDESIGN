@@ -296,10 +296,41 @@ function loadModel(url, modelName, applyReferenceAppearance = false) {
 	});
 }
 
+// Box3.setFromObject() measures every descendant, including hidden parts and
+// empty InstancedMesh placeholders whose raw geometry bounds are a unit cube.
+// Those placeholders inflate the instrument bounds ~3x, so measure only the
+// geometry that is actually drawn for the current view.
+function computeRenderableBounds(object) {
+	const box = new THREE.Box3().makeEmpty();
+	const partBox = new THREE.Box3();
+	const instanceMatrix = new THREE.Matrix4();
+
+	object.traverseVisible((child) => {
+		const geometry = child.isMesh ? child.geometry : null;
+		if (!geometry) return;
+		if (!geometry.boundingBox) geometry.computeBoundingBox();
+		if (!geometry.boundingBox) return;
+
+		if (child.isInstancedMesh) {
+			if (!child.count || !child.instanceMatrix) return;
+			for (let i = 0; i < child.count; i += 1) {
+				child.getMatrixAt(i, instanceMatrix);
+				instanceMatrix.premultiply(child.matrixWorld);
+				box.union(partBox.copy(geometry.boundingBox).applyMatrix4(instanceMatrix));
+			}
+			return;
+		}
+
+		box.union(partBox.copy(geometry.boundingBox).applyMatrix4(child.matrixWorld));
+	});
+
+	return box.isEmpty() ? new THREE.Box3().setFromObject(object) : box;
+}
+
 export function getModelStats(object) {
 	if (!object) return null;
 	object.updateMatrixWorld(true, true);
-	const box = new THREE.Box3().setFromObject(object);
+	const box = computeRenderableBounds(object);
 	const size = box.getSize(new THREE.Vector3());
 	const center = box.getCenter(new THREE.Vector3());
 	const radius = box.getBoundingSphere(new THREE.Sphere()).radius;

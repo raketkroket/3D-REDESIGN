@@ -24,7 +24,7 @@ export function createOptics(scene) {
  }
  for (const points of paths) { const marker=new THREE.Mesh(new THREE.SphereGeometry(.026,8,6),new THREE.MeshBasicMaterial({color:0xfff5b1}));marker.userData.component="rays";rays.add(marker);markers.push(marker); }
  const detector=new THREE.Mesh(new THREE.CylinderGeometry(.12,.12,.05,32),new THREE.MeshStandardMaterial({color:0x75c8ff,emissive:0x155577,roughness:.45}));detector.userData.component="detector";detector.position.y=-2.5;root.add(detector);
- const tube=new THREE.Mesh(new THREE.CylinderGeometry(.2,.25,.6,32,1,true,Math.PI/2,Math.PI),primaryMaterial);tube.userData.component="tube";tube.position.y=-2.02;root.add(tube);
+ const tube=new THREE.Mesh(new THREE.CylinderGeometry(.25,.2,.6,32,1,true,Math.PI/2,Math.PI),primaryMaterial);tube.userData.component="tube";tube.position.y=-2.02;root.add(tube);
  root.add(rays);scene.add(root);
  const selection=createSelectionHighlight(root,{ghostOpacity:.16});
  const selectableMeshes=component=>{const meshes=[];root.traverse(object=>{if((object.isMesh||object.isLine)&&object.userData.component===component)meshes.push(object);});return meshes;};

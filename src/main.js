@@ -130,11 +130,15 @@ function initializeExperience() {
 	}
 
 	function frameCurrentModel(viewName) {
+		// Instanced render batches start out unsynced, so their placeholder
+		// bounds would skew the fit on the first visit to a view.
+		getSatellite()?.userData.cadInstances?.sync();
+		getInstrument()?.userData.cadInstances?.sync();
 		const narrowViewport = camera.aspect < 0.9;
 		if (viewName === "instrument" || viewName === "instrument-interior") {
 			const instrument = getInstrument();
 			if (instrument) frameModelRoot(camera, controls, instrument, {
-				padding: narrowViewport ? 1.18 : 1.02,
+				padding: 1.12,
 				direction: [0.9, -0.25, 1],
 				verticalOffset: narrowViewport ? -0.04 : -0.08,
 			});
