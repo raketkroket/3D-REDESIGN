@@ -1,6 +1,7 @@
 import {
 	Scene,
 	Color,
+	Texture,
 	TextureLoader,
 	SRGBColorSpace,
 	MirroredRepeatWrapping,
@@ -10,13 +11,17 @@ import {
 	SphereGeometry,
 } from 'three'
 
-export function createScene(requestRender = () => {}) {
+const skyUrl = '/media/nebula-orbital-background-v2.webp'
+
+export function createScene(
+	requestRender = () => {},
+	{ loadBackground = true } = {},
+) {
 	const scene = new Scene()
 	scene.background = new Color(0x05080e)
-	const texture = new TextureLoader().load(
-		'/media/nebula-orbital-background-v2.webp',
-		requestRender,
-	)
+	const texture = loadBackground
+		? new TextureLoader().load(skyUrl, requestRender)
+		: new Texture()
 	texture.colorSpace = SRGBColorSpace
 	texture.wrapS = texture.wrapT = MirroredRepeatWrapping
 	const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -55,11 +60,24 @@ export function createScene(requestRender = () => {}) {
 	sky.renderOrder = -1100
 	sky.name = 'NebulaSky'
 	sky.frustumCulled = false
+	sky.visible = loadBackground
 	sky.onBeforeRender = () => {
 		material.uniforms.skyTime.value = reducedMotion.matches
 			? 0
 			: performance.now() / 1000
 	}
 	scene.add(sky)
+	scene.userData.loadBackground = () => {
+		if (sky.visible) return
+		material.uniforms.skyMap.value = new TextureLoader().load(
+			skyUrl,
+			(loaded) => {
+				loaded.colorSpace = SRGBColorSpace
+				loaded.wrapS = loaded.wrapT = MirroredRepeatWrapping
+				sky.visible = true
+				requestRender()
+			},
+		)
+	}
 	return scene
 }

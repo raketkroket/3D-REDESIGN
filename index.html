@@ -56,32 +56,41 @@
 			<div class="viewer" data-explorer="closed">
 				<canvas id="app" role="img" aria-label="Interactive 3D model of the NEBULA Xplorer satellite. Use the satellite explorer for the same information." data-i18n-nl-label="Interactief 3D-model van de NEBULA Xplorer-satelliet. Gebruik de satellietverkenner voor dezelfde informatie."></canvas>
 				<div class="viewer-markers" aria-hidden="true"></div>
-				<p class="viewer-label" aria-hidden="true" hidden>
-					<span class="viewer-label-number"></span>
-					<span class="viewer-label-name"></span>
-					<span class="viewer-tag" hidden></span>
-				</p>
-				<p class="viewer-status" role="status" hidden></p>
-				<p class="viewer-hint" aria-hidden="true">Drag to rotate · Scroll to zoom</p>
-				<div class="viewer-controls">
-					<button type="button" class="viewer-control" data-control="rotation" hidden>
-						<svg class="icon icon-pause" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3v10M11 3v10" /></svg>
-						<svg class="icon icon-play" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3l8 5-8 5z" /></svg>
-						<span class="viewer-control-label">Pause rotation</span>
-					</button>
-					<button type="button" class="viewer-control" data-control="outerPanels" aria-pressed="false" hidden>
-						<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 5l6-3 6 3-6 3zM2 8l6 3 6-3M2 11l6 3 6-3" /></svg>
-						<span class="viewer-control-label">Outer panels</span>
-					</button>
-					<button type="button" class="viewer-control" data-control="rays" hidden>
-						<svg class="icon icon-pause" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3v10M11 3v10" /></svg>
-						<svg class="icon icon-play" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3l8 5-8 5z" /></svg>
-						<span class="viewer-control-label">Pause X-rays</span>
-					</button>
-					<button type="button" class="viewer-control" data-control="reset" hidden>
-						<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8a5 5 0 1 0 1.5-3.6M3 2v3h3" /></svg>
-						<span class="viewer-control-label">Reset view</span>
-					</button>
+				<div class="viewer-visible-area">
+					<div class="viewer-poster" hidden>
+						<img src="/media/satellite-overview.webp" width="1200" height="800" loading="lazy" decoding="async" alt="Rendering of the NEBULA Xplorer satellite: a box-shaped spacecraft with two deployed solar panels." data-i18n-nl-alt="Weergave van de NEBULA Xplorer-satelliet: een kastvormig ruimtevaartuig met twee uitgeklapte zonnepanelen." />
+						<div class="viewer-poster-panel">
+							<p data-i18n-nl="Databesparing staat aan, dus het 3D-model wordt niet automatisch geladen. Alle informatie staat in de verkenner.">Data saver is on, so the 3D model is not loaded automatically. All information is available in the explorer.</p>
+							<button type="button" class="viewer-load-model" data-i18n-nl="3D-model laden (ca. 5,5 MB)">Load 3D model (about 5.5 MB)</button>
+						</div>
+					</div>
+					<p class="viewer-label" aria-hidden="true" hidden>
+						<span class="viewer-label-number"></span>
+						<span class="viewer-label-name"></span>
+						<span class="viewer-tag" hidden></span>
+					</p>
+					<p class="viewer-status" role="status" hidden></p>
+					<p class="viewer-hint" aria-hidden="true">Drag to rotate · Scroll to zoom</p>
+					<div class="viewer-controls">
+						<button type="button" class="viewer-control" data-control="rotation" hidden>
+							<svg class="icon icon-pause" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3v10M11 3v10" /></svg>
+							<svg class="icon icon-play" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3l8 5-8 5z" /></svg>
+							<span class="viewer-control-label">Pause rotation</span>
+						</button>
+						<button type="button" class="viewer-control" data-control="outerPanels" aria-pressed="false" hidden>
+							<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 5l6-3 6 3-6 3zM2 8l6 3 6-3M2 11l6 3 6-3" /></svg>
+							<span class="viewer-control-label">Outer panels</span>
+						</button>
+						<button type="button" class="viewer-control" data-control="rays" hidden>
+							<svg class="icon icon-pause" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3v10M11 3v10" /></svg>
+							<svg class="icon icon-play" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3l8 5-8 5z" /></svg>
+							<span class="viewer-control-label">Pause X-rays</span>
+						</button>
+						<button type="button" class="viewer-control" data-control="reset" hidden>
+							<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8a5 5 0 1 0 1.5-3.6M3 2v3h3" /></svg>
+							<span class="viewer-control-label">Reset view</span>
+						</button>
+					</div>
 				</div>
 			</div>
 
@@ -100,6 +109,9 @@
 						<p class="explorer-kicker" data-i18n-nl="Ruimtevaartuig">Spacecraft</p>
 						<h1 class="explorer-title" data-i18n-nl="NEBULA Xplorer-satelliet">NEBULA Xplorer satellite</h1>
 						<p class="explorer-lead" data-i18n-nl="Verken de NEBULA Xplorer-satelliet in 3D. Draai het ruimtevaartuig, zoom in en selecteer een onderdeel om te ontdekken waar het zich bevindt en wat het doet.">Explore the NEBULA Xplorer satellite in 3D. Rotate the spacecraft, zoom in, and select a component to discover where it is located and what it does.</p>
+						<figure class="explorer-figure">
+							<img src="/media/satellite-overview.webp" width="1200" height="800" loading="lazy" decoding="async" alt="Rendering of the NEBULA Xplorer satellite: a box-shaped spacecraft with two deployed solar panels." data-i18n-nl-alt="Weergave van de NEBULA Xplorer-satelliet: een kastvormig ruimtevaartuig met twee uitgeklapte zonnepanelen." />
+						</figure>
 						<nav class="explorer-tree-nav" aria-labelledby="explorer-components-title">
 							<h2 class="explorer-section-label" id="explorer-components-title" data-i18n-nl="Onderdelen">Components</h2>
 							<ol class="explorer-tree">

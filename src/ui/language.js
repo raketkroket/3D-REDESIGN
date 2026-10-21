@@ -79,6 +79,10 @@ export function createLanguage(dom) {
 			element.getAttribute('aria-label'),
 		]),
 	)
+	const altElements = [...document.querySelectorAll('[data-i18n-nl-alt]')]
+	const englishAlts = new Map(
+		altElements.map((element) => [element, element.alt]),
+	)
 	const listeners = new Set()
 	let language = 'en'
 
@@ -97,6 +101,11 @@ export function createLanguage(dom) {
 					? element.dataset.i18nNlLabel
 					: englishLabels.get(element),
 			)
+		for (const element of altElements)
+			element.alt =
+				language === 'nl'
+					? element.dataset.i18nNlAlt
+					: englishAlts.get(element)
 		for (const button of dom.languageButtons)
 			button.setAttribute(
 				'aria-pressed',

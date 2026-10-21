@@ -29,7 +29,6 @@ import { isCameraMoving, stopCameraTween } from './scene/updateCamera.js'
 import { createViewOffset } from './scene/viewOffset.js'
 import { createCameraOrbit } from './scene/cameraOrbit.js'
 
-const mobileQuery = window.matchMedia('(max-width: 899px)')
 const coarsePointerQuery = window.matchMedia('(pointer: coarse)')
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
 const selectionSources = new Set(['list', 'marker', 'canvas'])
@@ -47,8 +46,21 @@ function getHashId() {
 	}
 }
 
-function readPixels(element, property) {
-	return parseFloat(getComputedStyle(element).getPropertyValue(property)) || 0
+function readLayoutMode() {
+	return (
+		getComputedStyle(document.documentElement)
+			.getPropertyValue('--explorer-mode')
+			.trim() || 'panel'
+	)
+}
+
+function prefersReducedData() {
+	return (
+		window.matchMedia('(prefers-reduced-data: reduce)').matches ||
+		navigator.connection?.saveData === true ||
+		(import.meta.env.DEV &&
+			new URLSearchParams(window.location.search).has('reduced-data'))
+	)
 }
 
 function showFallbackNotice(dom, language) {
@@ -75,7 +87,8 @@ function initializeExplorer() {
 	const tree = createExplorerTree(readExplorerItems(dom.items))
 	const state = createViewerState(tree.rootId)
 	const panel = createExplorerPanel(dom, tree, language)
-	const scene = createScene(requestRender)
+	const reducedData = prefersReducedData()
+	const scene = createScene(requestRender, { loadBackground: !reducedData })
 	const camera = createCamera()
 	const controls = createControls(camera, renderer)
 	const lighting = createLights(scene, renderer)
@@ -92,6 +105,7 @@ function initializeExplorer() {
 		onPreview: setPreview,
 		onSelect: (id) => navigate(id, { source: 'marker' }),
 	})
+	let layoutMode = readLayoutMode()
 	let availableControls = { rotation: false, outerPanels: false, rays: false }
 	let markerCenter = null
 	let cadStateKey = null
@@ -103,7 +117,30 @@ function initializeExplorer() {
 	}
 
 	function isMobile() {
-		return mobileQuery.matches
+		return layoutMode === 'sheet'
+	}
+
+	function isDocked() {
+		return layoutMode.startsWith('docked')
+	}
+
+	function syncLayout() {
+		const nextMode = readLayoutMode()
+		dom.root.dataset.layout = nextMode
+		if (nextMode === layoutMode) return
+		layoutMode = nextMode
+		syncExplorerVisibility()
+		if (state.satelliteReady && !state.cameraAdjusted) reframeSelection()
+	}
+
+	function reframeSelection() {
+		const result = explorerScene.apply(
+			getSelectedItem(),
+			getSceneOptions(600),
+		)
+		cameraOrbit.setSettings(result.orbit)
+		updateMarkers(getSelectedItem())
+		requestRender()
 	}
 
 	function requestRender() {
@@ -169,22 +206,13 @@ function initializeExplorer() {
 	}
 
 	function updateViewOffsetTarget(immediate = false) {
-		let left = 0
-		let bottom = 0
-		if (isMobile()) {
-			if (state.sheetState === SHEET_STATES.CLOSED)
-				bottom = dom.explorerToggle.offsetHeight
-			else if (state.sheetState === SHEET_STATES.PEEK)
-				bottom = readPixels(dom.explorer, '--sheet-peek-height')
-			else
-				bottom =
-					viewerSize.height -
-					readPixels(dom.explorer, '--sheet-expanded-top')
-		} else if (state.explorerOpen) {
-			left = readPixels(dom.explorer, '--explorer-width')
-		}
+		const viewerBounds = dom.viewer.getBoundingClientRect()
+		const visibleBounds = dom.visibleArea.getBoundingClientRect()
 		viewOffset.setTarget(
-			{ left, bottom },
+			{
+				left: Math.max(0, visibleBounds.left - viewerBounds.left),
+				bottom: Math.max(0, viewerBounds.bottom - visibleBounds.bottom),
+			},
 			immediate || reduceMotion.matches,
 		)
 		requestRender()
@@ -192,9 +220,11 @@ function initializeExplorer() {
 
 	function syncExplorerVisibility() {
 		const mobile = isMobile()
-		const visible = mobile
-			? state.sheetState !== SHEET_STATES.CLOSED
-			: state.explorerOpen
+		const visible =
+			isDocked() ||
+			(mobile
+				? state.sheetState !== SHEET_STATES.CLOSED
+				: state.explorerOpen)
 		dom.explorer.inert = !visible
 		dom.explorer.dataset.open = String(state.explorerOpen)
 		dom.explorer.dataset.sheet = state.sheetState
@@ -227,11 +257,14 @@ function initializeExplorer() {
 	}
 
 	function openExplorer() {
-		if (isMobile()) setSheetState(SHEET_STATES.EXPANDED, { focus: true })
+		if (isDocked()) panel.focusItem(state.selectedId)
+		else if (isMobile())
+			setSheetState(SHEET_STATES.EXPANDED, { focus: true })
 		else setExplorerOpen(true, { focus: true })
 	}
 
 	function closeExplorer() {
+		if (isDocked()) return
 		if (isMobile()) setSheetState(SHEET_STATES.CLOSED, { focus: true })
 		else setExplorerOpen(false, { focus: true })
 	}
@@ -401,11 +434,7 @@ function initializeExplorer() {
 
 	function resetView() {
 		state.cameraAdjusted = false
-		const result = explorerScene.apply(
-			getSelectedItem(),
-			getSceneOptions(800),
-		)
-		cameraOrbit.setSettings(result.orbit)
+		reframeSelection()
 		state.lastInteractionTime = -Infinity
 		updateControlsUi()
 		requestRender()
@@ -438,7 +467,7 @@ function initializeExplorer() {
 			if (
 				isMobile() &&
 				state.sheetState === SHEET_STATES.PEEK &&
-				event.target.closest('.explorer-scroll')
+				!event.target.closest('a, button')
 			)
 				setSheetState(SHEET_STATES.EXPANDED)
 		})
@@ -503,7 +532,7 @@ function initializeExplorer() {
 					setSheetState(SHEET_STATES.PEEK)
 				else if (state.sheetState === SHEET_STATES.PEEK)
 					setSheetState(SHEET_STATES.CLOSED, { focus: true })
-			} else if (state.explorerOpen) {
+			} else if (state.explorerOpen && !isDocked()) {
 				setExplorerOpen(false, { focus: true })
 			}
 		})
@@ -515,7 +544,7 @@ function initializeExplorer() {
 		window.addEventListener('popstate', () => {
 			navigate(getHashId(), { source: 'history', push: false })
 		})
-		mobileQuery.addEventListener('change', syncExplorerVisibility)
+		window.addEventListener('resize', syncLayout)
 		coarsePointerQuery.addEventListener('change', updateHint)
 	}
 
@@ -615,6 +644,7 @@ function initializeExplorer() {
 			camera.aspect = width / height
 			renderer.setSize(width, height, false)
 			viewOffset.setSize(width, height)
+			syncLayout()
 			updateViewOffsetTarget(true)
 		}
 		new ResizeObserver(resizeRenderer).observe(dom.viewer)
@@ -654,6 +684,20 @@ function initializeExplorer() {
 		})
 	}
 
+	function offerModelDownload() {
+		dom.viewerPoster.hidden = false
+		dom.loadModelButton.addEventListener(
+			'click',
+			() => {
+				dom.viewerPoster.hidden = true
+				scene.userData.loadBackground()
+				loadInitialSatellite()
+				dom.explorerToggle.focus()
+			},
+			{ once: true },
+		)
+	}
+
 	function initializeState() {
 		const initialId = tree.has(getHashId()) ? getHashId() : tree.rootId
 		state.selectedId = initialId
@@ -663,6 +707,7 @@ function initializeExplorer() {
 				? SHEET_STATES.PEEK
 				: SHEET_STATES.CLOSED
 		}
+		dom.root.dataset.layout = layoutMode
 		panel.select(initialId, { smooth: false })
 		syncExplorerVisibility()
 		updateViewerLabel()
@@ -695,7 +740,8 @@ function initializeExplorer() {
 	bindViewerControls()
 	bindCanvasEvents()
 	bindRenderPipeline()
-	loadInitialSatellite()
+	if (reducedData) offerModelDownload()
+	else loadInitialSatellite()
 	requestRender()
 
 	if (import.meta.env.DEV)

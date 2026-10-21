@@ -5,6 +5,10 @@ import {
 	Points,
 	ShaderMaterial,
 } from 'three'
+const reducedMotion = globalThis.matchMedia?.(
+	'(prefers-reduced-motion: reduce)',
+)
+
 function createLayer({
 	amount,
 	seed: initialSeed,
@@ -94,7 +98,9 @@ function createLayer({
 	points.renderOrder = renderOrder
 	points.onBeforeRender = (renderer) => {
 		material.uniforms.pixelRatio.value = renderer.getPixelRatio()
-		material.uniforms.time.value = performance.now() / 1000
+		material.uniforms.time.value = reducedMotion?.matches
+			? 0
+			: performance.now() / 1000
 	}
 	return points
 }

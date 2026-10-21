@@ -87,6 +87,10 @@ Selecting an item flies the camera to a good viewing angle for it. After the fli
 
 Supported scenes: `satellite`, `satellite-component`, `instrument`, `instrument-component`, `optics`, `optical-path`, `optical-component`, `cad-parts`, `cad-part`. Satellite component ids are defined in `src/scene/objects/Satellite.js`; instrument part ids in `src/scene/objects/InstrumentComponents.js`.
 
+### Responsive design
+
+Layout follows the available space: a bottom sheet below 720 px, a side panel from 720 px, and a docked layout on dual-screen devices (Viewport Segments API, as progressive enhancement). Components adapt with container queries, and the explorer respects reduced motion, reduced transparency, increased contrast, forced colours and reduced data. See [`docs/responsive-design.md`](docs/responsive-design.md) for the tests, decisions and remaining work.
+
 ## Project structure
 
 See `CONVENTIONS.md`.
