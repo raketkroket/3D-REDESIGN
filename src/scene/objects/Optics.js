@@ -83,6 +83,7 @@ export function createOptics(scene) {
 	)
 	tube.userData.component = 'tube'
 	tube.position.y = -2.02
+	tube.rotation.z = Math.PI
 	root.add(tube)
 	const cameraHousing = new THREE.Mesh(
 		new THREE.CylinderGeometry(0.19, 0.19, 0.12, 32, 1, true),
