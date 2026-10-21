@@ -7,6 +7,7 @@ export const SHEET_STATES = Object.freeze({
 export function createViewerState(rootId) {
 	return {
 		selectedId: rootId,
+		selectedCollapsed: false,
 		previewId: null,
 		explorerOpen: false,
 		sheetState: SHEET_STATES.CLOSED,

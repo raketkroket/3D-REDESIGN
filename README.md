@@ -41,33 +41,37 @@ For a more detailed overview of our process, you can visit our project board, is
 
 The page opens on a fullscreen 3D model of the satellite. **Explore satellite** opens the explorer: a panel on the left on desktop, a bottom sheet with peek and expanded states on mobile. The page itself never scrolls; only the explorer content does.
 
-Visitors move through the hierarchy instead of switching viewer modes:
+The explorer is one continuous, nested list. Selecting an item expands it in place, showing its description and its own numbered parts underneath, while its parents stay visible:
 
 ```
-Satellite
-├── 01 X-Ray Instrument
-│   ├── 01 Instrument components (7 parts)
-│   └── 02 Optics
-│       ├── 01 Mirror and X-ray path (schematic, 6 parts)
-│       └── 02 Individual CAD parts (4 parts)
-├── 02 Star Tracker Module
-├── …
-└── 07 Solar Panel
+01 X-Ray Instrument
+   01 Instrument components
+      01 Detector modules … 07 Support panel
+   02 Optics
+      01 Mirror and X-ray path
+         01 Primary mirror … 06 X-ray path
+      02 Individual CAD parts
+02 Star Tracker Module
+…
+07 Solar Panel
 ```
 
-There is one explorer state: the selected item. It determines the panel content, breadcrumb, URL hash, camera framing, highlight, cutaway, which model is shown (satellite, detailed instrument, schematic or CAD part), the numbered markers and the contextual controls. Selecting an item in the panel, clicking a marker or clicking the model produces the same state.
+Only the path to the selected item is expanded, so the list never turns into a long accordion; the selection scrolls into a comfortable position. Selecting the selected item again collapses it. The breadcrumb at the top of the panel is orientation and a shortcut, not the main way to move around.
+
+There is one explorer state: the selected item. It determines the expanded path, the breadcrumb, the URL hash, camera framing, highlight, cutaway, which model is shown (satellite, detailed instrument, schematic or CAD part), the numbered markers and the contextual controls. Selecting an item in the explorer, clicking a marker or clicking the model produces the same state. On mobile the sheet collapses to peek after selecting an item without parts, so the camera movement is visible.
 
 ### Progressive enhancement and accessibility
 
-All content lives in `index.html` as `<article data-explorer-item>` elements with real links. Without JavaScript or WebGL the page becomes a normal scrolling document with the same hierarchy: every item has its breadcrumb, numbered label, heading, confirmed description, numbered child links and a back link. Every item is deep-linkable through its id, for example `/#instrument-detectors`.
+All content lives in `index.html` as one nested semantic list: every item is an `<li data-explorer-item>` with a heading containing a real link, a body with its confirmed description, and a nested `<ol>` of its parts. Without JavaScript or WebGL the page is a normal, fully expanded scrolling document with the same hierarchy, numbering and links. Every item is deep-linkable through its id, for example `/#instrument-detectors`.
 
-With JavaScript the same HTML becomes the explorer panel, and the 3D model enhances it:
+With JavaScript the same HTML becomes the explorer, and the 3D model enhances it:
 
-- the HTML explorer is the accessible interaction layer; the canvas is a single labelled image, and the numbered markers on the model are hidden from assistive technology because the matching list links ("05, Sun Sensor") carry the same action
-- selecting an item in the panel moves focus to its heading; selecting on the model announces the item through a status message
+- item links expose `aria-expanded` and `aria-controls`; collapsed parts are inert, so they are skipped by keyboard and screen readers
+- the selected item is marked with `aria-current`, and selections are announced through a status message ("05, Sun Sensor, selected")
+- the canvas is a single labelled image; the numbered markers on the model are hidden from assistive technology because the matching links carry the same action
 - Escape moves up one level inside the explorer and closes it at the top level
 - controls expose their state (`aria-expanded`, `aria-pressed`) and change their label where the action changes
-- `prefers-reduced-motion` removes camera flights, the ambient orbit and the X-ray animation
+- `prefers-reduced-motion` removes camera flights, the ambient orbit, expand animations and the X-ray animation
 
 Only confirmed content is shown. An item without a confirmed description simply has no description paragraph; there are no placeholder texts.
 
@@ -77,9 +81,9 @@ Selecting an item flies the camera to a good viewing angle for it. After the fli
 
 ### Adding or removing an item
 
-1. Add or remove an `<article data-explorer-item>` with a unique `id`, `data-scene` (plus `data-component` where needed), a numbered kicker, a title heading one level below its parent, its breadcrumb and a back link to its parent. Copy a sibling article as a template.
-2. Add or remove the matching numbered link in the parent's `.explorer-list` and update the numbers of the following siblings and the parent's child count.
-3. Run `node verify-explorer.mjs`. It reports any mismatch in numbers, counts, headings, breadcrumbs, back links or scene mapping.
+1. Add or remove an `<li class="explorer-node" data-explorer-item>` in its parent's `.explorer-tree` with a unique `id`, `data-scene` (plus `data-component` where needed), a heading one level below its parent containing the numbered link, and a `.explorer-node-body`. Copy a sibling as a template.
+2. Update the numbers of the following siblings and the parent's child count.
+3. Run `node verify-explorer.mjs`. It reports any mismatch in nesting, numbers, counts, heading levels or scene mapping.
 
 Supported scenes: `satellite`, `satellite-component`, `instrument`, `instrument-component`, `optics`, `optical-path`, `optical-component`, `cad-parts`, `cad-part`. Satellite component ids are defined in `src/scene/objects/Satellite.js`; instrument part ids in `src/scene/objects/InstrumentComponents.js`.
 

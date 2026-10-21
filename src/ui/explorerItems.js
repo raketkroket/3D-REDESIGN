@@ -1,12 +1,19 @@
+function getChildList(element) {
+	return [...element.querySelectorAll('.explorer-tree')].find(
+		(list) =>
+			list.parentElement.closest('[data-explorer-item]') === element,
+	)
+}
+
 export function readExplorerItems(itemElements) {
 	return itemElements.map((element) => ({
 		id: element.id,
 		scene: element.dataset.scene,
 		component: element.dataset.component ?? null,
 		childIds: [
-			...element.querySelectorAll(
-				':scope .explorer-list > li > a[href^="#"]',
-			),
-		].map((link) => link.hash.slice(1)),
+			...(getChildList(element)?.querySelectorAll(
+				':scope > li[data-explorer-item]',
+			) ?? []),
+		].map((child) => child.id),
 	}))
 }

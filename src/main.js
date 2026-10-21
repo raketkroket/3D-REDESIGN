@@ -30,7 +30,6 @@ import { createViewOffset } from './scene/viewOffset.js'
 import { createCameraOrbit } from './scene/cameraOrbit.js'
 
 const mobileQuery = window.matchMedia('(max-width: 899px)')
-const wideQuery = window.matchMedia('(min-width: 1280px)')
 const coarsePointerQuery = window.matchMedia('(pointer: coarse)')
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
 const selectionSources = new Set(['list', 'marker', 'canvas'])
@@ -96,7 +95,6 @@ function initializeExplorer() {
 	let availableControls = { rotation: false, outerPanels: false, rays: false }
 	let markerCenter = null
 	let cadStateKey = null
-	let collapseTimeout = null
 	raycaster.layers.enable(1)
 	controls.autoRotateSpeed = 0.32
 
@@ -213,11 +211,10 @@ function initializeExplorer() {
 	}
 
 	function setExplorerOpen(open, { focus = false } = {}) {
-		clearTimeout(collapseTimeout)
 		state.explorerOpen = open
 		syncExplorerVisibility()
 		if (!focus) return
-		if (open) panel.focusTitle()
+		if (open) panel.focusItem(state.selectedId)
 		else dom.explorerToggle.focus()
 	}
 
@@ -226,7 +223,7 @@ function initializeExplorer() {
 		syncExplorerVisibility()
 		if (!focus) return
 		if (sheetState === SHEET_STATES.CLOSED) dom.explorerToggle.focus()
-		else panel.focusTitle()
+		else panel.focusItem(state.selectedId)
 	}
 
 	function openExplorer() {
@@ -356,36 +353,23 @@ function initializeExplorer() {
 		requestRender()
 	}
 
-	function getDirection(previousId, nextId) {
-		if (previousId === nextId) return 'none'
-		return tree.getDepth(nextId) < tree.getDepth(previousId)
-			? 'back'
-			: 'forward'
-	}
-
 	function announce(id) {
+		const parts = [
+			tree.getNumber(id),
+			panel.getFullTitle(id),
+			language.text('selected'),
+		]
 		dom.status.textContent = ''
 		setTimeout(() => {
-			dom.status.textContent = `${panel.getFullTitle(id)}, ${panel.getKicker(id)}`
+			dom.status.textContent = parts.filter(Boolean).join(', ')
 		}, 60)
 	}
 
 	function revealSelection(id, source, keyboard) {
-		clearTimeout(collapseTimeout)
-		if (!selectionSources.has(source) || keyboard) return
-		if (isMobile()) {
-			setSheetState(SHEET_STATES.PEEK)
-			return
-		}
+		if (!isMobile() || !selectionSources.has(source) || keyboard) return
 		const isLeaf = tree.getChildren(id).length === 0
-		if (state.explorerOpen && isLeaf && !wideQuery.matches)
-			collapseTimeout = setTimeout(
-				() =>
-					setExplorerOpen(false, {
-						focus: dom.explorer.contains(document.activeElement),
-					}),
-				400,
-			)
+		if (isLeaf || state.sheetState === SHEET_STATES.CLOSED)
+			setSheetState(SHEET_STATES.PEEK)
 	}
 
 	function navigate(
@@ -397,13 +381,22 @@ function initializeExplorer() {
 		const changed = nextId !== previousId
 		if (push && changed) history.pushState(null, '', `#${nextId}`)
 		state.selectedId = nextId
+		state.selectedCollapsed = false
 		setPreview(null)
-		panel.showItem(nextId, { direction: getDirection(previousId, nextId) })
+		panel.select(nextId)
 		updateViewerLabel()
 		revealSelection(nextId, source, keyboard)
 		if (changed || source === 'history') applySceneState()
-		if (focus) panel.focusTitle()
-		else if (changed) announce(nextId)
+		if (focus) panel.focusItem(nextId)
+		if (changed) announce(nextId)
+	}
+
+	function toggleSelectedItem() {
+		state.selectedCollapsed = !state.selectedCollapsed
+		panel.select(state.selectedId, {
+			collapsed: state.selectedCollapsed,
+			scroll: !state.selectedCollapsed,
+		})
 	}
 
 	function resetView() {
@@ -420,7 +413,6 @@ function initializeExplorer() {
 
 	function getLinkSource(link) {
 		if (link.closest('.explorer-breadcrumb')) return 'breadcrumb'
-		if (link.closest('.explorer-pager')) return 'pager'
 		return 'list'
 	}
 
@@ -429,9 +421,16 @@ function initializeExplorer() {
 			const link = event.target.closest('a[href^="#"]')
 			if (link && tree.has(link.hash.slice(1))) {
 				event.preventDefault()
-				navigate(link.hash.slice(1), {
+				const id = link.hash.slice(1)
+				if (
+					id === state.selectedId &&
+					link.classList.contains('explorer-node-link')
+				) {
+					toggleSelectedItem()
+					return
+				}
+				navigate(id, {
 					source: getLinkSource(link),
-					focus: true,
 					keyboard: event.detail === 0,
 				})
 				return
@@ -444,7 +443,7 @@ function initializeExplorer() {
 				setSheetState(SHEET_STATES.EXPANDED)
 		})
 		const previewFromEvent = (event) => {
-			const link = event.target.closest('.explorer-list a')
+			const link = event.target.closest('.explorer-node-link')
 			setPreview(link ? link.hash.slice(1) : null)
 		}
 		dom.explorer.addEventListener('pointerover', previewFromEvent)
@@ -664,7 +663,7 @@ function initializeExplorer() {
 				? SHEET_STATES.PEEK
 				: SHEET_STATES.CLOSED
 		}
-		panel.showItem(initialId)
+		panel.select(initialId, { smooth: false })
 		syncExplorerVisibility()
 		updateViewerLabel()
 		updateHint()

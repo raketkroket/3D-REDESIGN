@@ -1,4 +1,6 @@
 const collapsedBreadcrumbLength = 4
+const comfortableOffset = 12
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
 
 function createElement(tagName, className, text) {
 	const element = document.createElement(tagName)
@@ -8,33 +10,67 @@ function createElement(tagName, className, text) {
 }
 
 export function createExplorerPanel(dom, tree, language) {
-	const itemElements = new Map(
-		dom.items.map((element) => [element.id, element]),
+	const nodes = new Map(
+		dom.items
+			.filter((element) => element.id !== tree.rootId)
+			.map((element) => [
+				element.id,
+				{
+					element,
+					link: element.querySelector(
+						':scope > .explorer-node-heading a',
+					),
+					body: element.querySelector(':scope > .explorer-node-body'),
+				},
+			]),
 	)
-	let currentId = tree.rootId
+	const rootElement = dom.items.find((element) => element.id === tree.rootId)
+	let selectedId = tree.rootId
 	let breadcrumbExpanded = false
+	let scrollTimeout = null
 
-	function getItemElement(id) {
-		return itemElements.get(id) ?? null
+	for (const { element, link, body } of nodes.values()) {
+		link.setAttribute('aria-controls', body.id)
+		link.setAttribute('aria-expanded', 'false')
+		body.inert = true
+		element.classList.remove('is-expanded')
 	}
 
 	function getTitle(id) {
-		const element = getItemElement(id)
-		if (!element) return ''
-		const shortLabel = language.attribute(element, 'shortLabel')
-		return (
-			shortLabel ||
-			element.querySelector('.explorer-title')?.textContent.trim() ||
-			''
-		)
+		if (id === tree.rootId) {
+			return (
+				language.attribute(rootElement, 'shortLabel') ||
+				rootElement.querySelector('.explorer-title').textContent.trim()
+			)
+		}
+		return getFullTitle(id)
 	}
 
 	function getFullTitle(id) {
+		if (id === tree.rootId)
+			return rootElement
+				.querySelector('.explorer-title')
+				.textContent.trim()
 		return (
-			getItemElement(id)
-				?.querySelector('.explorer-title')
+			nodes
+				.get(id)
+				?.element.querySelector(
+					':scope > .explorer-node-heading .explorer-node-title',
+				)
 				?.textContent.trim() ?? ''
 		)
+	}
+
+	function setExpanded(id, expanded) {
+		const node = nodes.get(id)
+		if (
+			!node ||
+			node.element.classList.contains('is-expanded') === expanded
+		)
+			return
+		node.element.classList.toggle('is-expanded', expanded)
+		node.link.setAttribute('aria-expanded', String(expanded))
+		node.body.inert = !expanded
 	}
 
 	function renderBreadcrumb(id) {
@@ -62,7 +98,7 @@ export function createExplorerPanel(dom, tree, language) {
 					)
 					button.addEventListener('click', () => {
 						breadcrumbExpanded = true
-						renderBreadcrumb(currentId)
+						renderBreadcrumb(selectedId)
 					})
 					listItem.append(button)
 					return listItem
@@ -83,99 +119,94 @@ export function createExplorerPanel(dom, tree, language) {
 				return listItem
 			}),
 		)
+		dom.currentNumber.textContent = tree.getNumber(id) ?? ''
+		dom.currentTitle.textContent = getFullTitle(id)
 	}
 
-	function renderPagerLink(item, direction) {
-		const link = createElement('a', `explorer-pager-${direction}`)
-		link.href = `#${item.id}`
-		link.append(
-			createElement(
-				'span',
-				'explorer-pager-number',
-				tree.getNumber(item.id),
-			),
-			createElement(
-				'span',
-				'explorer-pager-label',
-				getFullTitle(item.id),
-			),
-		)
-		link.setAttribute(
-			'aria-label',
-			`${language.text(direction)}: ${tree.getNumber(item.id)}, ${getFullTitle(item.id)}`,
-		)
-		return link
-	}
-
-	function renderPager(id) {
-		const siblings = tree.getSiblings(id)
-		if (siblings.length < 2) {
-			dom.pager.hidden = true
-			dom.pager.replaceChildren()
-			return
+	function scrollToNode(id, { smooth = true } = {}) {
+		clearTimeout(scrollTimeout)
+		const node = nodes.get(id)
+		const container = dom.explorerScroll
+		const behavior = smooth && !reduceMotion.matches ? 'smooth' : 'auto'
+		const scroll = () => {
+			if (!node) {
+				container.scrollTo({ top: 0, behavior })
+				return
+			}
+			const containerTop = container.getBoundingClientRect().top
+			const rowTop =
+				node.link.getBoundingClientRect().top -
+				containerTop +
+				container.scrollTop
+			const comfortableBottom =
+				container.scrollTop + container.clientHeight * 0.4
+			if (
+				rowTop >= container.scrollTop + comfortableOffset &&
+				rowTop <= comfortableBottom
+			)
+				return
+			container.scrollTo({
+				top: Math.max(0, rowTop - comfortableOffset),
+				behavior,
+			})
 		}
-		const index = tree.getIndex(id)
-		const previous =
-			siblings[(index - 1 + siblings.length) % siblings.length]
-		const next = siblings[(index + 1) % siblings.length]
-		dom.pager.hidden = false
-		dom.pager.setAttribute('aria-label', language.text('pager'))
-		dom.pager.replaceChildren(
-			renderPagerLink(previous, 'previous'),
-			renderPagerLink(next, 'next'),
+		scrollTimeout = setTimeout(
+			scroll,
+			smooth && !reduceMotion.matches ? 280 : 0,
 		)
 	}
 
-	function render(id) {
+	function select(
+		id,
+		{ collapsed = false, scroll = true, smooth = true } = {},
+	) {
+		if (id !== selectedId) breadcrumbExpanded = false
+		selectedId = id
+		const path = new Set(tree.getPath(id).map((item) => item.id))
+		for (const [nodeId, node] of nodes) {
+			const isSelected = nodeId === id
+			setExpanded(nodeId, path.has(nodeId) && !(isSelected && collapsed))
+			node.element.classList.toggle('is-selected', isSelected)
+			node.element.classList.toggle(
+				'is-in-path',
+				path.has(nodeId) && !isSelected,
+			)
+			if (isSelected) node.link.setAttribute('aria-current', 'true')
+			else node.link.removeAttribute('aria-current')
+		}
 		renderBreadcrumb(id)
-		renderPager(id)
+		if (scroll) scrollToNode(id, { smooth })
 	}
 
-	function showItem(id, { direction = 'none' } = {}) {
-		const element = getItemElement(id)
-		if (!element) return
-		if (id !== currentId) breadcrumbExpanded = false
-		currentId = id
-		for (const [itemId, itemElement] of itemElements)
-			itemElement.hidden = itemId !== id
-		element.classList.remove('is-entering-forward', 'is-entering-back')
-		if (direction !== 'none') {
-			void element.offsetWidth
-			element.classList.add(`is-entering-${direction}`)
-		}
-		render(id)
-		dom.explorerScroll.scrollTop = 0
+	function isExpanded(id) {
+		return Boolean(nodes.get(id)?.element.classList.contains('is-expanded'))
 	}
 
 	function setPreview(id) {
-		for (const link of dom.explorer.querySelectorAll('.explorer-list a'))
-			link.classList.toggle('is-previewed', link.hash === `#${id}`)
+		for (const { element, link } of nodes.values())
+			link.classList.toggle('is-previewed', element.id === id)
 	}
 
-	function getKicker(id) {
-		return (
-			getItemElement(id)
-				?.querySelector('.explorer-kicker')
-				?.textContent.trim() ?? ''
-		)
-	}
-
-	function focusTitle() {
-		const title =
-			getItemElement(currentId)?.querySelector('.explorer-title')
-		if (!title) return
+	function focusItem(id) {
+		const node = nodes.get(id)
+		if (node) {
+			node.link.focus({ preventScroll: true })
+			return
+		}
+		const title = rootElement.querySelector('.explorer-title')
 		title.tabIndex = -1
 		title.focus({ preventScroll: true })
 	}
 
-	language.onChange(() => render(currentId))
+	language.onChange(() => renderBreadcrumb(selectedId))
 
 	return {
-		focusTitle,
+		focusItem,
 		getFullTitle,
-		getKicker,
 		getTitle,
+		isExpanded,
+		scrollToNode,
+		select,
 		setPreview,
-		showItem,
 	}
 }

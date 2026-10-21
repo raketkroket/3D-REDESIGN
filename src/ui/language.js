@@ -5,7 +5,6 @@ const interfaceCopy = {
 		expandExplorer: 'Show more',
 		collapseExplorer: 'Show less',
 		breadcrumb: 'Breadcrumb',
-		pager: 'Neighbouring items',
 		pauseRotation: 'Pause rotation',
 		resumeRotation: 'Resume rotation',
 		outerPanels: 'Outer panels',
@@ -19,8 +18,6 @@ const interfaceCopy = {
 		schematic: 'Schematic · not to scale',
 		cadPart: 'Supplied CAD part',
 		showFullPath: 'Show full path',
-		previous: 'Previous',
-		next: 'Next',
 		selected: 'selected',
 		fallback:
 			'The interactive 3D model is not available on this device. All satellite information is available below.',
@@ -31,7 +28,6 @@ const interfaceCopy = {
 		expandExplorer: 'Meer tonen',
 		collapseExplorer: 'Minder tonen',
 		breadcrumb: 'Kruimelpad',
-		pager: 'Naastliggende onderdelen',
 		pauseRotation: 'Draaien pauzeren',
 		resumeRotation: 'Draaien hervatten',
 		outerPanels: 'Buitenpanelen',
@@ -45,8 +41,6 @@ const interfaceCopy = {
 		schematic: 'Schematisch · niet op schaal',
 		cadPart: 'Aangeleverd CAD-onderdeel',
 		showFullPath: 'Volledig pad tonen',
-		previous: 'Vorige',
-		next: 'Volgende',
 		selected: 'geselecteerd',
 		fallback:
 			'Het interactieve 3D-model is niet beschikbaar op dit apparaat. Alle informatie over de satelliet staat hieronder.',

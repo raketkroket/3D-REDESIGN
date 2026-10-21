@@ -14,75 +14,88 @@ const instrumentComponents = [
 	'mounts',
 	'support',
 ]
+const voidElements = new Set(['img', 'meta', 'link', 'br', 'input', 'path'])
 const html = await fs.readFile(new URL('./index.html', import.meta.url), 'utf8')
-const articlePattern =
-	/<article\b([^>]*\bdata-explorer-item\b[^>]*)>([\s\S]*?)<\/article>/g
 const attribute = (attributes, name) =>
-	attributes.match(new RegExp(`(?:^|\\s)${name}="([^"]*)"`))?.[1] ?? null
-const stripTags = (markup) => markup.replace(/<[^>]+>/g, '').trim()
+	attributes.match(new RegExp(`(?:^|\\s)${name}(?:="([^"]*)")?(?=\\s|$)`))
+		? (attributes.match(new RegExp(`(?:^|\\s)${name}="([^"]*)"`))?.[1] ??
+			'')
+		: null
 
-const items = [...html.matchAll(articlePattern)].map(([, attributes, body]) => {
-	const list =
-		body.match(/<ol class="explorer-list">([\s\S]*?)<\/ol>/)?.[1] ?? ''
-	const title = body.match(
-		/<h(\d) class="explorer-title"[^>]*>([^<]*)<\/h\1>/,
-	)
-	const breadcrumb =
-		body.match(
-			/<nav class="explorer-item-breadcrumb"[^>]*>([\s\S]*?)<\/nav>/,
-		)?.[1] ?? null
-	return {
-		id: attribute(attributes, 'id'),
-		scene: attribute(attributes, 'data-scene'),
-		component: attribute(attributes, 'data-component'),
-		titleLevel: title ? Number(title[1]) : null,
-		title: title?.[2].trim(),
-		kicker: stripTags(
-			body.match(
-				/<p class="explorer-kicker"[^>]*>([\s\S]*?)<\/p>/,
-			)?.[1] ?? '',
-		),
-		sectionLevels: [
-			...body.matchAll(/<h(\d) class="explorer-section-label"/g),
-		].map(([, level]) => Number(level)),
-		links: [
-			...list.matchAll(
-				/<a href="#([^"]+)"><span class="explorer-list-number">(\d+)[\s\S]*?<\/span>[\s\S]*?(?:<span class="explorer-list-meta">(\d+))?[^<]*(?:<span class="visually-hidden"[^>]*>[^<]*<\/span><\/span>)?<\/a>/g,
-			),
-		].map(([, id, number, count]) => ({
-			id,
-			number,
-			count: count ? Number(count) : 0,
-		})),
-		childIds: [...list.matchAll(/href="#([^"]+)"/g)].map(([, id]) => id),
-		breadcrumbIds: breadcrumb
-			? [...breadcrumb.matchAll(/href="#([^"]+)"/g)].map(([, id]) => id)
-			: null,
-		breadcrumbCurrent: breadcrumb
-			? stripTags(
-					breadcrumb.match(
-						/<span aria-current="location"[^>]*>([^<]*)<\/span>/,
-					)?.[1] ?? '',
-				)
-			: null,
-		backId: body.match(/<p class="explorer-back"><a href="#([^"]+)"/)?.[1],
+const items = []
+const itemStack = []
+const elementStack = []
+let capture = null
+for (const match of html.matchAll(
+	/<(\/?)([a-z0-9]+)([^>]*?)(\/?)>|([^<]+)/gi,
+)) {
+	const [, closing, tagName, rawAttributes = '', selfClosing, text] = match
+	if (text !== undefined) {
+		if (capture) capture.target[capture.key] += text
+		continue
 	}
-})
+	const tag = tagName.toLowerCase()
+	const attributes = rawAttributes.trim()
+	if (closing) {
+		const element = elementStack.pop()
+		assert.equal(element.tag, tag, `unbalanced </${tag}>`)
+		if (element.item) itemStack.pop()
+		if (element.capture) capture = null
+		continue
+	}
+	if (voidElements.has(tag) || selfClosing) continue
+	const element = { tag }
+	elementStack.push(element)
+	const current = itemStack.at(-1)
+	if (attribute(attributes, 'data-explorer-item') !== null) {
+		const item = {
+			id: attribute(attributes, 'id'),
+			tag,
+			scene: attribute(attributes, 'data-scene'),
+			component: attribute(attributes, 'data-component'),
+			parentId: current?.id ?? null,
+			childIds: [],
+			title: '',
+			number: '',
+			count: '',
+			headingLevel: null,
+			hasBody: false,
+		}
+		current?.childIds.push(item.id)
+		items.push(item)
+		itemStack.push(item)
+		element.item = true
+		continue
+	}
+	if (!current) continue
+	const className = attribute(attributes, 'class') ?? ''
+	if (className === 'explorer-node-heading')
+		current.headingLevel ??= Number(tag.slice(1))
+	if (className === 'explorer-node-body') current.hasBody = true
+	const field =
+		className === 'explorer-node-title' || className === 'explorer-title'
+			? 'title'
+			: className === 'explorer-list-number'
+				? 'number'
+				: className === 'explorer-list-meta'
+					? 'count'
+					: null
+	if (field && !current[`${field}Done`]) {
+		current[`${field}Done`] = true
+		capture = { target: current, key: field }
+		element.capture = true
+	}
+}
+assert.equal(elementStack.length, 0, 'unclosed elements')
 
 assert(items.length > 0, 'No explorer items found')
 assert.equal(new Set(items.map((item) => item.id)).size, items.length)
-const ids = new Set(items.map((item) => item.id))
-const parents = new Map()
+const tree = createExplorerTree(items)
+assert.equal(tree.rootId, 'satellite')
 for (const item of items) {
-	assert(item.title, `${item.id} has no title`)
-	assert(item.kicker, `${item.id} has no kicker`)
+	const title = item.title.trim()
+	assert(title, `${item.id} has no title`)
 	assert(explorerScenes.includes(item.scene), `${item.id}: unknown scene`)
-	assert.equal(item.links.length, item.childIds.length, `${item.id} links`)
-	for (const childId of item.childIds) {
-		assert(ids.has(childId), `${item.id} links to missing ${childId}`)
-		assert(!parents.has(childId), `${childId} has more than one parent`)
-		parents.set(childId, item.id)
-	}
 	if (item.scene === 'satellite-component')
 		assert(satelliteComponents.includes(item.component), item.id)
 	if (item.scene === 'instrument-component')
@@ -91,34 +104,26 @@ for (const item of items) {
 		assert(item.component in opticalComponents, item.id)
 	if (item.scene === 'cad-part')
 		assert(opticalComponents[item.component]?.cadPart, item.id)
-}
-
-const tree = createExplorerTree(items)
-assert.equal(tree.rootId, 'satellite')
-assert(!parents.has(tree.rootId))
-for (const item of items) {
+	if (item.id === tree.rootId) continue
 	const depth = tree.getDepth(item.id)
-	const path = tree.getPath(item.id).map((pathItem) => pathItem.id)
-	assert.equal(item.titleLevel, Math.min(depth + 1, 6), `${item.id} heading`)
-	for (const level of item.sectionLevels)
-		assert.equal(
-			level,
-			Math.min(depth + 2, 6),
-			`${item.id} section heading`,
-		)
-	item.links.forEach((link, index) => {
-		assert.equal(link.number, String(index + 1).padStart(2, '0'), link.id)
-		assert.equal(link.count, tree.getChildren(link.id).length, link.id)
-	})
-	if (item.id === tree.rootId) {
-		assert.equal(item.breadcrumbIds, null)
-		continue
-	}
-	assert(parents.has(item.id), `${item.id} is not reachable`)
-	assert(item.kicker.endsWith(tree.getNumber(item.id)), `${item.id} kicker`)
-	assert.deepEqual(item.breadcrumbIds, path.slice(0, -1), `${item.id} path`)
-	assert.equal(item.breadcrumbCurrent, item.title, `${item.id} current`)
-	assert.equal(item.backId, parents.get(item.id), `${item.id} back link`)
+	assert.equal(item.tag, 'li', `${item.id} must be a list item`)
+	assert(item.hasBody, `${item.id} has no expandable body`)
+	assert.equal(
+		item.headingLevel,
+		Math.min(depth + 2, 6),
+		`${item.id} heading`,
+	)
+	assert.equal(
+		item.number.replace(',', '').trim(),
+		tree.getNumber(item.id),
+		`${item.id} number`,
+	)
+	const children = tree.getChildren(item.id).length
+	assert.equal(
+		Number.parseInt(item.count, 10) || 0,
+		children,
+		`${item.id} child count`,
+	)
 }
 assert.deepEqual(
 	tree.getPath('instrument-detectors').map((item) => item.id),
@@ -142,6 +147,6 @@ console.log(
 		depth: Math.max(...items.map((item) => tree.getDepth(item.id))),
 		satelliteComponents: tree.getChildren('satellite').length,
 		instrumentComponents: tree.getChildren('instrument-components').length,
-		checks: 'unique ids, single parent, reachable items, scene mapping, heading levels, list numbers and counts, kicker numbers, breadcrumbs, back links, status region',
+		checks: 'balanced nested markup, unique ids, nesting defines hierarchy, scene mapping, heading levels, numbers, child counts, expandable bodies, status region',
 	}),
 )
