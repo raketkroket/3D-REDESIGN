@@ -40,6 +40,8 @@ function isObjectVisible(object) {
 	return true
 }
 
+export const explorerScenes = Object.keys(representationsByScene)
+
 export function getRepresentation(item) {
 	return representationsByScene[item.scene] ?? 'satellite'
 }

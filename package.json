@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "format": "prettier --write \"src/**/*.{js,mjs}\" \"scripts/**/*.{js,mjs}\" \"verify-*.mjs\"",
     "format:check": "prettier --check --end-of-line auto \"src/**/*.{js,mjs}\" \"scripts/**/*.{js,mjs}\" \"verify-*.mjs\"",
-    "verify": "node verify-viewer-assets.mjs && node verify-models.mjs && node verify-optics.mjs && node verify-performance.mjs && node verify-motion-detail.mjs && node verify-cad-transforms.mjs"
+    "verify": "node verify-viewer-assets.mjs && node verify-models.mjs && node verify-optics.mjs && node verify-performance.mjs && node verify-motion-detail.mjs && node verify-cad-transforms.mjs && node verify-explorer.mjs"
   },
   "devDependencies": {
     "prettier": "3.9.10",

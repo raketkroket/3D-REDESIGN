@@ -59,6 +59,8 @@ const componentMeshNames = {
 	],
 }
 
+export const satelliteComponents = Object.keys(componentMeshNames)
+
 const satelliteInteriorHideNames = [
 	'Top_Side_Panel',
 	'Upper_Side_Panel',

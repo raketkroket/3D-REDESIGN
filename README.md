@@ -35,4 +35,68 @@ https://github.com/user-attachments/assets/48dab2d1-1ea3-45cf-8552-8d4928064c60
 
 We started with research and inspiration. After several team discussions, we defined our concept and began designing the experience.
 Once the design direction was clear, we divided the project into different features. Each team member took ownership of specific parts and worked on developing them.
-For a more detailed overview of our process, you can visit our project board, issues and website 
+For a more detailed overview of our process, you can visit our project board, issues and website
+
+## Satellite explorer
+
+The page opens on a fullscreen 3D model of the satellite. **Explore satellite** opens the explorer: a panel on the left on desktop, a bottom sheet with peek and expanded states on mobile. The page itself never scrolls; only the explorer content does.
+
+Visitors move through the hierarchy instead of switching viewer modes:
+
+```
+Satellite
+├── 01 X-Ray Instrument
+│   ├── 01 Instrument components (7 parts)
+│   └── 02 Optics
+│       ├── 01 Mirror and X-ray path (schematic, 6 parts)
+│       └── 02 Individual CAD parts (4 parts)
+├── 02 Star Tracker Module
+├── …
+└── 07 Solar Panel
+```
+
+There is one explorer state: the selected item. It determines the panel content, breadcrumb, URL hash, camera framing, highlight, cutaway, which model is shown (satellite, detailed instrument, schematic or CAD part), the numbered markers and the contextual controls. Selecting an item in the panel, clicking a marker or clicking the model produces the same state.
+
+### Progressive enhancement
+
+All content lives in `index.html` as `<article data-explorer-item>` elements with real links. Without JavaScript or WebGL the page is a readable document with the same information and links. Every item is deep-linkable through its id, for example `/#instrument-detectors`.
+
+### Adding or removing an item
+
+1. Add or remove an `<article data-explorer-item>` with a unique `id`, a title, `data-category` / `data-category-nl` and its `data-scene` (plus `data-component` where needed).
+2. Add or remove the matching link in the parent's `.explorer-list`. The list order determines the numbers in the panel and on the markers.
+3. Run `node verify-explorer.mjs`.
+
+Supported scenes: `satellite`, `satellite-component`, `instrument`, `instrument-component`, `optics`, `optical-path`, `optical-component`, `cad-parts`, `cad-part`. Satellite component ids are defined in `src/scene/objects/Satellite.js`; instrument part ids in `src/scene/objects/InstrumentComponents.js`.
+
+## Project structure
+
+See `CONVENTIONS.md`.
+
+- `src/app/` – explorer tree and viewer state
+- `src/ui/` – DOM bindings, explorer panel, markers, viewer controls and language
+- `src/scene/` – renderer, camera, lighting, explorer scene logic and scene objects
+- `src/assets/models/` – `satellite/` and `instrument/` hold the runtime viewer GLBs, `cad/` the individual CAD parts and `source/` the source models used to build them
+
+## Replacing supplied CAD models
+
+The viewer loads `src/assets/models/satellite/Satellite.viewer.glb` and `src/assets/models/instrument/Instrument.viewer.glb`. They are generated from the source-colour GLBs in `src/assets/models/source/` by the **Build viewer assets** workflow (`scripts/optimize-model.mjs`). Keep the source file names to preserve loading and interaction.
+
+The satellite importer maps the component ids `xrayInstrument`, `starTrackerModule`, `dawn4UCubeDrive`, `sBandAntenna`, `sunSensor`, `magnetorquers` and `solarPanel` from the CAD hierarchy in `src/scene/objects/Satellite.js`. Keep the corresponding group-name prefixes in the export, or update that mapping after verifying click selection.
+
+## Development and checks
+
+```sh
+npm install
+npm run dev
+```
+
+Before committing:
+
+```sh
+npm run build
+npm run format:check
+npm run verify
+```
+
+`npm run verify` runs every verification script: viewer assets, models, optics, performance, motion detail, CAD transforms and the explorer hierarchy.
