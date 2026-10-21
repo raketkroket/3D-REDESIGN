@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { createSelectionHighlight } from './SelectionHighlight.js'
+import { computeRenderableBounds } from '../bounds.js'
 
 function componentForMesh(mesh) {
 	const names = []
@@ -34,6 +35,16 @@ export function createInstrumentComponents(root) {
 		highlight(component) {
 			selection.apply(groups.get(component) ?? [])
 		},
+		preview(component) {
+			selection.preview(groups.get(component) ?? [])
+		},
+		getAnchor(component) {
+			root.updateWorldMatrix(true, true)
+			const box = new THREE.Box3()
+			for (const mesh of groups.get(component) ?? [])
+				if (mesh.visible) box.expandByObject(mesh)
+			return box.isEmpty() ? null : box.getCenter(new THREE.Vector3())
+		},
 		getFocus(component, camera, target) {
 			root.updateWorldMatrix(true, true)
 			const box = new THREE.Box3().makeEmpty()
@@ -45,9 +56,9 @@ export function createInstrumentComponents(root) {
 				componentCenter: box.getCenter(new THREE.Vector3()),
 				componentRadius: box.getBoundingSphere(new THREE.Sphere())
 					.radius,
-				satelliteRadius: new THREE.Box3()
-					.setFromObject(root)
-					.getBoundingSphere(new THREE.Sphere()).radius,
+				satelliteRadius: computeRenderableBounds(
+					root,
+				).getBoundingSphere(new THREE.Sphere()).radius,
 				direction: camera.position.clone().sub(target).normalize(),
 			}
 		},

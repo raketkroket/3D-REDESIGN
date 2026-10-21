@@ -1,8 +1,8 @@
 import * as THREE from 'three'
-import TWEEN from 'three/examples/jsm/libs/tween.module.js'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js'
 import { createSelectionHighlight } from './SelectionHighlight.js'
+import { computeRenderableBounds } from '../bounds.js'
 
 const satelliteModelUrl = new URL(
 	'../../assets/models/satellite/Satellite.viewer.glb',
@@ -344,7 +344,6 @@ function loadModel(url, modelName, applyReferenceAppearance = false) {
 				if (modelName === 'NebulaSatellite')
 					satelliteMaterialMap = materialMap
 
-				console.log(`[${modelName}] loaded`, getModelStats(root))
 				resolve(root)
 			},
 			undefined,
@@ -359,7 +358,7 @@ function loadModel(url, modelName, applyReferenceAppearance = false) {
 export function getModelStats(object) {
 	if (!object) return null
 	object.updateMatrixWorld(true, true)
-	const box = new THREE.Box3().setFromObject(object)
+	const box = computeRenderableBounds(object)
 	const size = box.getSize(new THREE.Vector3())
 	const center = box.getCenter(new THREE.Vector3())
 	const radius = box.getBoundingSphere(new THREE.Sphere()).radius
@@ -372,53 +371,54 @@ export function getModelStats(object) {
 	}
 }
 
-export function frameModelRoot(
+export function getModelFraming(
 	camera,
-	controls,
 	object,
-	{ padding = 1.6, direction } = {},
+	{ padding = 1.6, direction, aspect = camera.aspect } = {},
 ) {
-	if (!object || !camera || !controls) return null
 	const stats = getModelStats(object)
 	if (!stats) return null
-
 	const verticalFov = THREE.MathUtils.degToRad(camera.fov)
-	const horizontalFov =
-		2 * Math.atan(Math.tan(verticalFov / 2) * camera.aspect)
+	const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * aspect)
 	const limitingFov = Math.min(verticalFov, horizontalFov)
 	const distance = (stats.radius / Math.sin(limitingFov / 2)) * padding
 	const cameraOffset = direction
 		? new THREE.Vector3(...direction).normalize().multiplyScalar(distance)
 		: new THREE.Vector3(0, stats.radius * 0.18, distance)
-	const targetPosition = stats.center.clone()
-	const cameraPosition = targetPosition.clone().add(cameraOffset)
+	const target = stats.center.clone()
+	return {
+		stats,
+		target,
+		position: target.clone().add(cameraOffset),
+		minDistance: distance * 0.25,
+		maxDistance: distance * 1.55,
+		near: Math.max(0.1, stats.radius * 0.02),
+		far: distance + stats.radius * 10,
+	}
+}
 
-	camera.position.copy(cameraPosition)
-	controls.target.copy(targetPosition)
-	controls.minDistance = distance * 0.25
-	controls.maxDistance = distance * 1.55
-	camera.near = Math.max(0.1, stats.radius * 0.02)
-	camera.far = distance + stats.radius * 10
+export function frameModelRoot(camera, controls, object, options = {}) {
+	if (!object || !camera || !controls) return null
+	const framing = getModelFraming(camera, object, options)
+	if (!framing) return null
+	camera.position.copy(framing.position)
+	controls.target.copy(framing.target)
+	controls.minDistance = framing.minDistance
+	controls.maxDistance = framing.maxDistance
+	camera.near = framing.near
+	camera.far = framing.far
 	camera.updateProjectionMatrix()
 	const damping = controls.enableDamping
 	const autoRotate = controls.autoRotate
 	controls.enableDamping = false
 	controls.autoRotate = false
 	controls.update()
-	camera.position.copy(cameraPosition)
-	controls.target.copy(targetPosition)
+	camera.position.copy(framing.position)
+	controls.target.copy(framing.target)
 	controls.update()
 	controls.enableDamping = damping
 	controls.autoRotate = autoRotate
-
-	console.log('[camera-framing]', {
-		center: targetPosition.toArray(),
-		size: stats.size.toArray(),
-		radius: stats.radius,
-		cameraPosition: cameraPosition.toArray(),
-	})
-
-	return stats
+	return framing.stats
 }
 
 export function loadSatellite(scene, { onLoad, onError } = {}) {
@@ -429,7 +429,6 @@ export function loadSatellite(scene, { onLoad, onError } = {}) {
 			setView('satellite')
 
 			scene.add(satelliteRoot)
-			console.log('[scene] satellite added', satelliteRoot.name)
 
 			onLoad?.(satelliteRoot, getModelStats(satelliteRoot))
 		})
@@ -496,7 +495,6 @@ export function setView(viewName) {
 		instrumentRoot.visible = nextView === 'instrument'
 	}
 
-	console.log('[view]', nextView)
 	return nextView
 }
 
@@ -647,51 +645,70 @@ export function highlightComponent(component) {
 	satelliteHighlight?.apply(componentMeshes.get(component) ?? [])
 }
 
-export function rotateSatellite() {
-	if (satelliteRoot && currentView !== 'instrument') {
-		satelliteRoot.rotation.y += 0.001
-		satelliteRoot.rotation.x += 0.0005
-		satelliteRoot.rotation.z += 0.0003
-	}
-	if (instrumentRoot && currentView === 'instrument') {
-		instrumentRoot.rotation.y += 0.001
-		instrumentRoot.rotation.x += 0.0005
-	}
+export function previewComponent(component) {
+	satelliteHighlight?.preview(componentMeshes.get(component) ?? [])
 }
 
-export function resetSatellite(duration = 1500) {
-	if (satelliteRoot) {
-		const startSatelliteRotation = {
-			x: satelliteRoot.rotation.x,
-			y: satelliteRoot.rotation.y,
-			z: satelliteRoot.rotation.z,
-		}
+const componentAnchorPaths = {
+	xrayInstrument: 'concentrator_sunshades',
+}
 
-		const endSatelliteRotation = {
-			x: 0.698,
-			y: -0.611,
-			z: -0.175,
-		}
+const componentsAnchoredOnLargestPart = new Set(['solarPanel'])
 
-		if (duration === 0) {
-			satelliteRoot.rotation.set(
-				endSatelliteRotation.x,
-				endSatelliteRotation.y,
-				endSatelliteRotation.z,
-			)
-			return
+function getLargestMeshCenter(meshes) {
+	let largest = null
+	let largestVolume = -1
+	const box = new THREE.Box3()
+	const size = new THREE.Vector3()
+	for (const mesh of meshes) {
+		if (!mesh.visible) continue
+		box.setFromObject(mesh).getSize(size)
+		const volume = size.x * size.y + size.y * size.z + size.x * size.z
+		if (volume > largestVolume) {
+			largestVolume = volume
+			largest = box.getCenter(new THREE.Vector3())
 		}
-
-		new TWEEN.Tween(startSatelliteRotation)
-			.to(endSatelliteRotation, duration)
-			.easing(TWEEN.Easing.Quadratic.InOut)
-			.onUpdate(() => {
-				satelliteRoot.rotation.set(
-					startSatelliteRotation.x,
-					startSatelliteRotation.y,
-					startSatelliteRotation.z,
-				)
-			})
-			.start()
 	}
+	return largest
+}
+
+function getSurfaceDistance(halfSize, direction) {
+	let distance = Infinity
+	for (const axis of ['x', 'y', 'z']) {
+		const component = Math.abs(direction[axis])
+		if (component > 1e-6)
+			distance = Math.min(distance, halfSize[axis] / component)
+	}
+	return Number.isFinite(distance) ? distance : 0
+}
+
+export function getComponentAnchor(component, camera) {
+	if (!satelliteRoot) return null
+	if (component === 'sunSensor')
+		return getComponentFocus(component, { camera })?.componentCenter ?? null
+	satelliteRoot.updateWorldMatrix(true, true)
+	if (componentsAnchoredOnLargestPart.has(component))
+		return getLargestMeshCenter(componentMeshes.get(component) ?? [])
+	const meshes = (componentMeshes.get(component) ?? []).filter(
+		(mesh) => mesh.visible,
+	)
+	const anchorPath = componentAnchorPaths[component]
+	const anchorMeshes = anchorPath
+		? meshes.filter((mesh) => getObjectPath(mesh).includes(anchorPath))
+		: []
+	const box = new THREE.Box3()
+	for (const mesh of anchorMeshes.length ? anchorMeshes : meshes)
+		box.expandByObject(mesh)
+	if (box.isEmpty()) return null
+	const center = box.getCenter(new THREE.Vector3())
+	if (anchorPath) return center
+	const satelliteCenter = getModelStats(satelliteRoot).center
+	const direction = center.clone().sub(satelliteCenter)
+	if (direction.lengthSq() < 1e-8) return center
+	direction.normalize()
+	const halfSize = box.getSize(new THREE.Vector3()).multiplyScalar(0.5)
+	return center.addScaledVector(
+		direction,
+		getSurfaceDistance(halfSize, direction),
+	)
 }

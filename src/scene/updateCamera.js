@@ -8,16 +8,34 @@ export function stopCameraTween() {
 	cameraTween = undefined
 }
 
-export function resetCamera(controls, camera, duration = 1100) {
-	stopCameraTween()
-	const startPosition = camera.position.clone()
+export function isCameraMoving() {
+	return Boolean(cameraTween?.isPlaying())
+}
+
+function startOrbitTween(
+	controls,
+	camera,
+	endTarget,
+	endDirection,
+	endDistance,
+	duration,
+) {
 	const startTarget = controls.target.clone()
-	const overviewPosition = new THREE.Vector3(0, 0, 5)
-	const overviewTarget = new THREE.Vector3()
+	const startDirection = camera.position.clone().sub(startTarget).normalize()
+	const startDistance = camera.position.distanceTo(startTarget)
+	const orbitRotation = new THREE.Quaternion().setFromUnitVectors(
+		startDirection,
+		endDirection,
+	)
+	const orbitQuaternion = new THREE.Quaternion()
+	const orbitDirection = new THREE.Vector3()
+	const target = new THREE.Vector3()
 
 	if (duration === 0) {
-		camera.position.copy(overviewPosition)
-		controls.target.copy(overviewTarget)
+		camera.position
+			.copy(endTarget)
+			.addScaledVector(endDirection, endDistance)
+		controls.target.copy(endTarget)
 		controls.update()
 		return
 	}
@@ -26,12 +44,16 @@ export function resetCamera(controls, camera, duration = 1100) {
 		.to({ progress: 1 }, duration)
 		.easing(TWEEN.Easing.Cubic.InOut)
 		.onUpdate(({ progress }) => {
-			camera.position.lerpVectors(
-				startPosition,
-				overviewPosition,
-				progress,
-			)
-			controls.target.lerpVectors(startTarget, overviewTarget, progress)
+			target.lerpVectors(startTarget, endTarget, progress)
+			orbitQuaternion.identity().slerp(orbitRotation, progress)
+			orbitDirection.copy(startDirection).applyQuaternion(orbitQuaternion)
+			camera.position
+				.copy(target)
+				.addScaledVector(
+					orbitDirection,
+					THREE.MathUtils.lerp(startDistance, endDistance, progress),
+				)
+			controls.target.copy(target)
 			controls.update()
 		})
 		.onComplete(() => {
@@ -40,16 +62,49 @@ export function resetCamera(controls, camera, duration = 1100) {
 		.start()
 }
 
-export function updateCamera(controls, camera, focus, duration = 1100) {
+export function moveCamera(controls, camera, framing, duration = 1000) {
+	stopCameraTween()
+	camera.up.set(0, 1, 0)
+	camera.near = Math.min(camera.near, framing.near)
+	camera.far = Math.max(camera.far, framing.far)
+	camera.updateProjectionMatrix()
+	controls.minDistance = Math.min(controls.minDistance, framing.minDistance)
+	controls.maxDistance = Math.max(controls.maxDistance, framing.maxDistance)
+	const direction = framing.position.clone().sub(framing.target)
+	const distance = direction.length()
+	startOrbitTween(
+		controls,
+		camera,
+		framing.target,
+		direction.normalize(),
+		distance,
+		duration,
+	)
+	const settle = () => {
+		camera.near = framing.near
+		camera.far = framing.far
+		camera.updateProjectionMatrix()
+		controls.minDistance = framing.minDistance
+		controls.maxDistance = framing.maxDistance
+	}
+	if (cameraTween)
+		cameraTween.onComplete(() => {
+			cameraTween = undefined
+			settle()
+		})
+	else settle()
+}
+
+export function updateCamera(
+	controls,
+	camera,
+	focus,
+	duration = 1100,
+	{ aspect = camera.aspect } = {},
+) {
 	stopCameraTween()
 	camera.up.set(0, 1, 0)
 
-	const startTarget = controls.target.clone()
-	const startDirection = camera.position.clone().sub(startTarget).normalize()
-	const orbitRotation = new THREE.Quaternion().setFromUnitVectors(
-		startDirection,
-		focus.direction,
-	)
 	const currentDistance = camera.position.distanceTo(controls.target)
 	const minimumDistance = Math.max(
 		focus.satelliteRadius * 1.2,
@@ -66,50 +121,26 @@ export function updateCamera(controls, camera, focus, duration = 1100) {
 		minimumDistance,
 		maximumDistance,
 	)
+	const verticalFov = THREE.MathUtils.degToRad(camera.fov)
+	const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * aspect)
+	const limitingFov = Math.min(verticalFov, horizontalFov)
+	const fitDistance =
+		(focus.componentRadius / Math.sin(limitingFov / 2)) * 1.15
+	distance = Math.max(distance, fitDistance)
+	controls.maxDistance = Math.max(controls.maxDistance, distance * 1.25)
 	if (focus.detailView) {
-		const verticalFov = THREE.MathUtils.degToRad(camera.fov)
-		const horizontalFov =
-			2 * Math.atan(Math.tan(verticalFov / 2) * camera.aspect)
-		distance =
-			(focus.componentRadius /
-				Math.sin(Math.min(verticalFov, horizontalFov) / 2)) *
-			2.5
+		distance = (focus.componentRadius / Math.sin(limitingFov / 2)) * 2.5
 		controls.minDistance = distance * 0.65
 		controls.maxDistance = maximumDistance
 	} else {
 		controls.minDistance = focus.satelliteRadius * 0.75
 	}
-	const orbitQuaternion = new THREE.Quaternion()
-	const orbitDirection = new THREE.Vector3()
-	const target = new THREE.Vector3()
-
-	if (duration === 0) {
-		camera.position
-			.copy(focus.componentCenter)
-			.addScaledVector(focus.direction, distance)
-		controls.target.copy(focus.componentCenter)
-		controls.update()
-		return
-	}
-
-	cameraTween = new TWEEN.Tween({ progress: 0 })
-		.to({ progress: 1 }, duration)
-		.easing(TWEEN.Easing.Cubic.InOut)
-		.onUpdate(({ progress }) => {
-			target.lerpVectors(startTarget, focus.componentCenter, progress)
-			orbitQuaternion.identity().slerp(orbitRotation, progress)
-			orbitDirection.copy(startDirection).applyQuaternion(orbitQuaternion)
-			camera.position
-				.copy(target)
-				.addScaledVector(
-					orbitDirection,
-					THREE.MathUtils.lerp(currentDistance, distance, progress),
-				)
-			controls.target.copy(target)
-			controls.update()
-		})
-		.onComplete(() => {
-			cameraTween = undefined
-		})
-		.start()
+	startOrbitTween(
+		controls,
+		camera,
+		focus.componentCenter,
+		focus.direction,
+		distance,
+		duration,
+	)
 }

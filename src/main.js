@@ -1,751 +1,666 @@
 import * as THREE from 'three'
-import { opticalComponents } from './scene/objects/OpticalComponents.js'
-import { createMotionDetail } from './scene/objects/MotionDetail.js'
-import { createOptics, createPartViewer } from './scene/objects/Optics.js'
-import { createInstrumentComponents } from './scene/objects/InstrumentComponents.js'
-import { createCadInstances } from './scene/objects/CadInstances.js'
-import { createRenderQuality } from './scene/renderQuality.js'
 import TWEEN from 'three/examples/jsm/libs/tween.module.js'
-import { createScene } from './scene/scene.js'
+import { createExplorerTree } from './app/explorerTree.js'
+import { SHEET_STATES, createViewerState } from './app/viewerState.js'
+import { createDomBindings } from './ui/domBindings.js'
+import { readExplorerItems } from './ui/explorerItems.js'
+import { createExplorerPanel } from './ui/explorerPanel.js'
+import { createLanguage } from './ui/language.js'
+import { createMarkers } from './ui/markers.js'
+import { updateViewerControls } from './ui/viewerControls.js'
 import { createCamera } from './scene/camera.js'
-import { createRenderer } from './scene/renderer.js'
 import { createControls, updateControls } from './scene/controls.js'
-import { createLights } from './scene/lights.js'
 import {
-	frameModelRoot,
-	getModelStats,
-	getSatellite,
-	getSatelliteMaterialMap,
-	getInstrument,
+	createExplorerScene,
+	getRepresentation,
+} from './scene/explorerScene.js'
+import { createLights } from './scene/lights.js'
+import { createMotionDetail } from './scene/objects/MotionDetail.js'
+import {
 	getComponentFromObject,
-	getComponentFocus,
-	getSelectableComponentMeshes,
-	highlightComponent,
-	loadInstrument,
+	getModelStats,
 	loadSatellite,
-	resetSatellite,
-	showSatellite,
-	showSatelliteInterior,
-	showInstrument,
-	showInstrumentInterior,
-	getCurrentView,
 } from './scene/objects/Satellite.js'
 import { createStars } from './scene/objects/star.js'
-import { stopCameraTween, updateCamera } from './scene/updateCamera.js'
+import { createRenderQuality } from './scene/renderQuality.js'
+import { createRenderer } from './scene/renderer.js'
+import { createScene } from './scene/scene.js'
+import { isCameraMoving, stopCameraTween } from './scene/updateCamera.js'
+import { createViewOffset } from './scene/viewOffset.js'
 
-function isObjectVisible(object) {
-	for (let current = object; current; current = current.parent)
-		if (!current.visible) return false
-	return true
+const mobileQuery = window.matchMedia('(max-width: 899px)')
+const wideQuery = window.matchMedia('(min-width: 1280px)')
+const coarsePointerQuery = window.matchMedia('(pointer: coarse)')
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
+const selectionSources = new Set(['list', 'marker', 'canvas'])
+
+function wait(milliseconds) {
+	return new Promise((resolve) => setTimeout(resolve, milliseconds))
 }
 
-function initializeExperience() {
-	const visualization = document.querySelector('.visualization')
+function getHashId() {
+	try {
+		return decodeURIComponent(window.location.hash.slice(1))
+	} catch {
+		return ''
+	}
+}
+
+function readPixels(element, property) {
+	return parseFloat(getComputedStyle(element).getPropertyValue(property)) || 0
+}
+
+function initializeExplorer() {
+	const dom = createDomBindings()
 	const renderer = createRenderer()
+	if (!renderer || !dom.items.length) return
 
-	if (!visualization || !renderer) return
-
+	dom.root.classList.add('js-enhanced')
+	const tree = createExplorerTree(readExplorerItems(dom.items))
+	const state = createViewerState(tree.rootId)
+	const language = createLanguage(dom)
+	const panel = createExplorerPanel(dom, tree, language)
 	const scene = createScene(requestRender)
 	const camera = createCamera()
-	const canvas = renderer.domElement
-	const componentLinks = [...document.querySelectorAll('[data-3d-object]')]
-	const componentDetails = [
-		...document.querySelectorAll('[data-component-info]'),
-	]
-	const componentDetailsPanel = document.querySelector('.component-details')
-	const instrumentLinks = [
-		...document.querySelectorAll('[data-instrument-component]'),
-	]
-	const instrumentDetails = [
-		...document.querySelectorAll('[data-instrument-info]'),
-	]
-	const instrumentDetailsPanel = document.querySelector('.instrument-details')
-	const instrumentNavigation = document.querySelector(
-		'.instrument-navigation',
-	)
-	let instrumentComponents = null
-	let selectedInstrumentComponent = null
-	const selectionStatus = document.querySelector('.selection-status')
-	const experienceModeLinks = [
-		...document.querySelectorAll('[data-experience-mode]'),
-	]
-	const languageButtons = [...document.querySelectorAll('[data-language]')]
-	const translatableElements = [
-		...document.querySelectorAll('[data-i18n-nl]'),
-	]
-	const englishCopy = new Map(
-		translatableElements.map((element) => [element, element.textContent]),
-	)
-	const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
-	const raycaster = new THREE.Raycaster()
-	raycaster.layers.enable(1)
-	const pointer = new THREE.Vector2()
-	const viewButtons = [...document.querySelectorAll('[data-view]')]
 	const controls = createControls(camera, renderer)
 	const lighting = createLights(scene, renderer)
-	controls.addEventListener('start', stopCameraTween)
-	let pointerStart = null
-	let pointerDragged = false
-	let selectedComponent = null
-	let activeLanguage = 'en'
-	let frameRequest = null
-	let viewerInViewport = true
-	let viewRequest = 0
-	let activeView = 'satellite'
-	const optics = createOptics(scene)
-	const parts = createPartViewer(scene)
-	const opticsPanel = document.querySelector('.optics-panel')
-	const partSelect = document.querySelector('#cad-part')
-	const playButton = document.querySelector('#ray-play')
-	let rayPlaying = false
-	let lastFrameTime = null
-	let interacting = false
-	let rotationPaused = false
 	const renderQuality = createRenderQuality(renderer)
 	const motionDetail = createMotionDetail()
-	let cadState = null
-	const toolbar = document.querySelector('.view-switcher')
-	visualization.parentElement.append(toolbar, opticsPanel)
+	const viewOffset = createViewOffset(camera)
+	const explorerScene = createExplorerScene({ scene, camera, controls })
+	const starfield = createStars(14000, scene)
+	const raycaster = new THREE.Raycaster()
+	const pointer = new THREE.Vector2()
+	const viewerSize = { width: 1, height: 1 }
+	const markers = createMarkers(dom.markers, {
+		onPreview: setPreview,
+		onSelect: (id) => navigate(id, { source: 'marker' }),
+	})
+	let availableControls = { rotation: false, outerPanels: false, rays: false }
+	let markerCenter = null
+	let cadStateKey = null
+	let collapseTimeout = null
+	raycaster.layers.enable(1)
 	controls.autoRotateSpeed = 0.32
-	controls.addEventListener('start', () => {
-		interacting = true
-		requestRender()
-	})
-	controls.addEventListener('end', () => {
-		interacting = false
-		requestRender()
-	})
+
+	function getSelectedItem() {
+		return tree.get(state.selectedId)
+	}
+
+	function isMobile() {
+		return mobileQuery.matches
+	}
 
 	function requestRender() {
-		if (frameRequest !== null || document.hidden || !viewerInViewport)
-			return
-		frameRequest = requestAnimationFrame(renderFrame)
+		if (state.frameRequest !== null || document.hidden) return
+		state.frameRequest = requestAnimationFrame(renderFrame)
 	}
 
 	function renderFrame(time) {
-		frameRequest = null
-		if (document.hidden || !viewerInViewport) return
-		const frameMs = lastFrameTime === null ? 0 : time - lastFrameTime
+		state.frameRequest = null
+		if (document.hidden) return
+		const frameMs =
+			state.lastFrameTime === null ? 0 : time - state.lastFrameTime
 		const delta = Math.min(frameMs / 1000, 0.1)
-		lastFrameTime = time
+		state.lastFrameTime = time
 		TWEEN.update(time)
+		const tweening = TWEEN.getAll().some((tween) => tween.isPlaying())
 		controls.autoRotate =
-			!rotationPaused &&
-			!interacting &&
+			state.satelliteReady &&
+			getSelectedItem().scene === 'satellite' &&
+			!state.rotationPaused &&
+			!state.interacting &&
 			!reduceMotion.matches &&
-			!TWEEN.getAll().some((tween) => tween.isPlaying())
+			!tweening
 		updateControls(delta)
+		const offsetMoving = viewOffset.update(delta || 1 / 60)
 		const moving =
 			controls.autoRotate ||
-			interacting ||
-			optics.isAnimating() ||
-			TWEEN.getAll().some((tween) => tween.isPlaying())
-		renderQuality.update(frameMs, moving, interacting)
-		const nextCadState = `${activeView}/${selectedComponent}/${selectedInstrumentComponent}`
-		if (nextCadState !== cadState) {
-			getSatellite()?.userData.cadInstances?.sync()
-			getInstrument()?.userData.cadInstances?.sync()
-			cadState = nextCadState
+			state.interacting ||
+			tweening ||
+			offsetMoving ||
+			explorerScene.isAnimating()
+		renderQuality.update(frameMs, moving, state.interacting)
+		const nextCadStateKey = [
+			state.selectedId,
+			state.previewId,
+			state.outerPanelsVisible,
+			explorerScene.getCurrentRepresentation(),
+		].join('|')
+		if (nextCadStateKey !== cadStateKey) {
+			for (const root of explorerScene.getRoots())
+				root?.userData.cadInstances?.sync()
+			cadStateKey = nextCadStateKey
 		}
-		motionDetail.update([getSatellite(), getInstrument()], moving)
+		motionDetail.update(explorerScene.getRoots(), moving)
 		lighting.update(camera, controls.target)
-		if (optics.isAnimating()) optics.update(time)
+		explorerScene.update(time)
 		renderer.render(scene, camera)
-		if (
-			controls.autoRotate ||
-			optics.isAnimating() ||
-			TWEEN.getAll().some((tween) => tween.isPlaying())
+		markers.setHidden(isCameraMoving())
+		markers.update(
+			camera,
+			viewerSize.width,
+			viewerSize.height,
+			markerCenter,
 		)
-			requestRender()
+		if (moving) requestRender()
 	}
 
-	controls.addEventListener('change', requestRender)
-	document.addEventListener('visibilitychange', () => {
-		lastFrameTime = null
+	function updateViewOffsetTarget(immediate = false) {
+		let left = 0
+		let bottom = 0
+		if (isMobile()) {
+			if (state.sheetState === SHEET_STATES.CLOSED)
+				bottom = dom.explorerToggle.offsetHeight
+			else if (state.sheetState === SHEET_STATES.PEEK)
+				bottom = readPixels(dom.explorer, '--sheet-peek-height')
+			else
+				bottom =
+					viewerSize.height -
+					readPixels(dom.explorer, '--sheet-expanded-top')
+		} else if (state.explorerOpen) {
+			left = readPixels(dom.explorer, '--explorer-width')
+		}
+		viewOffset.setTarget(
+			{ left, bottom },
+			immediate || reduceMotion.matches,
+		)
 		requestRender()
-	})
-	new IntersectionObserver(([entry]) => {
-		viewerInViewport = entry.isIntersecting
-		if (viewerInViewport) requestRender()
-	}).observe(visualization)
+	}
 
-	if (import.meta.env.DEV) {
+	function syncExplorerVisibility() {
+		const mobile = isMobile()
+		const visible = mobile
+			? state.sheetState !== SHEET_STATES.CLOSED
+			: state.explorerOpen
+		dom.explorer.inert = !visible
+		dom.explorer.dataset.open = String(state.explorerOpen)
+		dom.explorer.dataset.sheet = state.sheetState
+		dom.viewer.dataset.explorer = visible ? 'open' : 'closed'
+		dom.viewer.dataset.sheet = mobile ? state.sheetState : 'none'
+		dom.explorerToggle.setAttribute('aria-expanded', String(visible))
+		const expanded = state.sheetState === SHEET_STATES.EXPANDED
+		dom.explorerGrabber.setAttribute('aria-expanded', String(expanded))
+		dom.explorerGrabber.setAttribute(
+			'aria-label',
+			language.text(expanded ? 'collapseExplorer' : 'expandExplorer'),
+		)
+		updateViewOffsetTarget()
+	}
+
+	function setExplorerOpen(open, { focus = false } = {}) {
+		clearTimeout(collapseTimeout)
+		state.explorerOpen = open
+		syncExplorerVisibility()
+		if (!focus) return
+		if (open) panel.focusTitle()
+		else dom.explorerToggle.focus()
+	}
+
+	function setSheetState(sheetState, { focus = false } = {}) {
+		state.sheetState = sheetState
+		syncExplorerVisibility()
+		if (!focus) return
+		if (sheetState === SHEET_STATES.CLOSED) dom.explorerToggle.focus()
+		else panel.focusTitle()
+	}
+
+	function openExplorer() {
+		if (isMobile()) setSheetState(SHEET_STATES.EXPANDED, { focus: true })
+		else setExplorerOpen(true, { focus: true })
+	}
+
+	function closeExplorer() {
+		if (isMobile()) setSheetState(SHEET_STATES.CLOSED, { focus: true })
+		else setExplorerOpen(false, { focus: true })
+	}
+
+	function setStatus(kind) {
+		dom.viewerStatus.hidden = !kind
+		dom.viewerStatus.textContent = kind
+			? language.text(kind === 'error' ? 'loadError' : 'loading')
+			: ''
+		dom.viewer.classList.toggle('is-loading', kind === 'loading')
+	}
+
+	function updateViewerLabel() {
+		const item = getSelectedItem()
+		const isRoot = item.id === tree.rootId
+		dom.viewerLabel.hidden = isRoot
+		dom.viewerLabelNumber.textContent = tree.getNumber(item.id) ?? ''
+		dom.viewerLabelName.textContent = panel.getFullTitle(item.id)
+		const representation = getRepresentation(item)
+		const tag =
+			representation === 'optics'
+				? 'schematic'
+				: representation === 'part'
+					? 'cadPart'
+					: null
+		dom.viewerTag.hidden = !tag
+		dom.viewerTag.textContent = tag ? language.text(tag) : ''
+	}
+
+	function updateHint() {
+		dom.viewerHint.textContent = language.text(
+			coarsePointerQuery.matches ? 'hintTouch' : 'hintPointer',
+		)
+	}
+
+	function updateControlsUi() {
+		updateViewerControls(dom, language, {
+			available: {
+				...availableControls,
+				reset: state.cameraAdjusted && state.satelliteReady,
+			},
+			state,
+		})
+	}
+
+	function updateMarkers(item) {
+		const anchors = explorerScene.getMarkerAnchors(
+			tree.getChildren(item.id),
+		)
+		markers.set(
+			anchors.map(({ id, position }) => ({
+				id,
+				position,
+				number: tree.getNumber(id),
+				label: panel.getFullTitle(id),
+			})),
+		)
+		const activeObject = explorerScene.getActiveObject()
+		markerCenter =
+			anchors.length && activeObject
+				? getModelStats(activeObject).center
+				: null
+	}
+
+	function setPreview(id) {
+		if (state.previewId === id) return
+		state.previewId = id
+		panel.setPreview(id)
+		markers.setPreview(id)
+		explorerScene.preview(id ? tree.get(id) : null)
+		requestRender()
+	}
+
+	function getSceneOptions(duration) {
+		return {
+			outerPanelsVisible: state.outerPanelsVisible,
+			raysPlaying: state.raysPlaying && !reduceMotion.matches,
+			duration: reduceMotion.matches ? 0 : duration,
+			aspect: viewOffset.getVisibleAspect(),
+		}
+	}
+
+	async function applySceneState() {
+		if (!state.satelliteReady) return
+		const request = ++state.viewRequest
+		const item = getSelectedItem()
+		state.outerPanelsVisible = false
+		state.cameraAdjusted = false
+		state.previewId = null
+		markers.set([])
+		const currentRepresentation = explorerScene.getCurrentRepresentation()
+		const switching =
+			currentRepresentation !== null &&
+			(getRepresentation(item) !== currentRepresentation ||
+				item.scene === 'cad-part')
+		if (!explorerScene.isReady(item)) setStatus('loading')
+		try {
+			await explorerScene.prepare(item)
+		} catch (error) {
+			console.error('3D view failed to load', error)
+			if (request === state.viewRequest) setStatus('error')
+			return
+		}
+		if (request !== state.viewRequest) return
+		setStatus(null)
+		if (switching && !reduceMotion.matches) {
+			dom.viewer.classList.add('is-switching')
+			await wait(180)
+			if (request !== state.viewRequest) return
+		}
+		stopCameraTween()
+		const result = explorerScene.apply(item, getSceneOptions(1000))
+		dom.viewer.classList.remove('is-switching')
+		dom.viewer.dataset.representation = result.representation
+		availableControls = result.controls
+		updateMarkers(item)
+		updateControlsUi()
+		requestRender()
+	}
+
+	function getDirection(previousId, nextId) {
+		if (previousId === nextId) return 'none'
+		return tree.getDepth(nextId) < tree.getDepth(previousId)
+			? 'back'
+			: 'forward'
+	}
+
+	function revealSelection(id, source, keyboard) {
+		clearTimeout(collapseTimeout)
+		if (!selectionSources.has(source) || keyboard) return
+		if (isMobile()) {
+			setSheetState(SHEET_STATES.PEEK)
+			return
+		}
+		const isLeaf = tree.getChildren(id).length === 0
+		if (state.explorerOpen && isLeaf && !wideQuery.matches)
+			collapseTimeout = setTimeout(
+				() =>
+					setExplorerOpen(false, {
+						focus: dom.explorer.contains(document.activeElement),
+					}),
+				400,
+			)
+	}
+
+	function navigate(
+		id,
+		{ source = 'list', push = true, focus = false } = {},
+	) {
+		const nextId = tree.has(id) ? id : tree.rootId
+		const previousId = state.selectedId
+		const changed = nextId !== previousId
+		if (push && changed) history.pushState(null, '', `#${nextId}`)
+		state.selectedId = nextId
+		setPreview(null)
+		panel.showItem(nextId, { direction: getDirection(previousId, nextId) })
+		updateViewerLabel()
+		revealSelection(nextId, source, focus)
+		if (changed || source === 'history') applySceneState()
+		if (focus) panel.focusTitle()
+	}
+
+	function resetView() {
+		state.cameraAdjusted = false
+		explorerScene.apply(getSelectedItem(), getSceneOptions(800))
+		updateControlsUi()
+		requestRender()
+	}
+
+	function getLinkSource(link) {
+		if (link.closest('.explorer-breadcrumb')) return 'breadcrumb'
+		if (link.closest('.explorer-pager')) return 'pager'
+		return 'list'
+	}
+
+	function bindExplorerEvents() {
+		dom.explorer.addEventListener('click', (event) => {
+			const link = event.target.closest('a[href^="#"]')
+			if (link && tree.has(link.hash.slice(1))) {
+				event.preventDefault()
+				navigate(link.hash.slice(1), {
+					source: getLinkSource(link),
+					focus: event.detail === 0,
+				})
+				return
+			}
+			if (
+				isMobile() &&
+				state.sheetState === SHEET_STATES.PEEK &&
+				event.target.closest('.explorer-scroll')
+			)
+				setSheetState(SHEET_STATES.EXPANDED)
+		})
+		const previewFromEvent = (event) => {
+			const link = event.target.closest('.explorer-list a')
+			setPreview(link ? link.hash.slice(1) : null)
+		}
+		dom.explorer.addEventListener('pointerover', previewFromEvent)
+		dom.explorer.addEventListener('focusin', previewFromEvent)
+		dom.explorer.addEventListener('pointerleave', () => setPreview(null))
+		dom.explorer.addEventListener('focusout', (event) => {
+			if (!dom.explorer.contains(event.relatedTarget)) setPreview(null)
+		})
+		dom.explorerToggle.addEventListener('click', openExplorer)
+		dom.skipLink.addEventListener('click', (event) => {
+			event.preventDefault()
+			openExplorer()
+		})
+		dom.explorerClose.addEventListener('click', closeExplorer)
+		dom.explorerGrabber.addEventListener('click', () => {
+			setSheetState(
+				state.sheetState === SHEET_STATES.EXPANDED
+					? SHEET_STATES.PEEK
+					: SHEET_STATES.EXPANDED,
+			)
+		})
+		let dragStart = null
+		dom.explorerBar.addEventListener('pointerdown', (event) => {
+			if (!isMobile() || event.target.closest('a, .explorer-close'))
+				return
+			dragStart = event.clientY
+		})
+		dom.explorerBar.addEventListener('pointerup', (event) => {
+			if (dragStart === null) return
+			const distance = event.clientY - dragStart
+			dragStart = null
+			if (distance < -40) setSheetState(SHEET_STATES.EXPANDED)
+			else if (distance > 40)
+				setSheetState(
+					state.sheetState === SHEET_STATES.EXPANDED
+						? SHEET_STATES.PEEK
+						: SHEET_STATES.CLOSED,
+				)
+		})
+		dom.explorerBar.addEventListener('pointercancel', () => {
+			dragStart = null
+		})
+		document.addEventListener('keydown', (event) => {
+			if (event.key !== 'Escape') return
+			if (isMobile()) {
+				if (state.sheetState === SHEET_STATES.EXPANDED)
+					setSheetState(SHEET_STATES.PEEK)
+				else if (state.sheetState === SHEET_STATES.PEEK)
+					setSheetState(SHEET_STATES.CLOSED, { focus: true })
+			} else if (state.explorerOpen) {
+				setExplorerOpen(false, { focus: true })
+			}
+		})
+		for (const link of document.querySelectorAll('[data-explorer-home]'))
+			link.addEventListener('click', (event) => {
+				event.preventDefault()
+				navigate(tree.rootId, { source: 'breadcrumb' })
+			})
+		window.addEventListener('popstate', () => {
+			navigate(getHashId(), { source: 'history', push: false })
+		})
+		mobileQuery.addEventListener('change', syncExplorerVisibility)
+		coarsePointerQuery.addEventListener('change', updateHint)
+	}
+
+	function bindViewerControls() {
+		dom.controls.rotation.addEventListener('click', () => {
+			state.rotationPaused = !state.rotationPaused
+			updateControlsUi()
+			requestRender()
+		})
+		dom.controls.outerPanels.addEventListener('click', () => {
+			const item = getSelectedItem()
+			state.outerPanelsVisible = !state.outerPanelsVisible
+			explorerScene.setOuterPanels(item, state.outerPanelsVisible)
+			updateMarkers(item)
+			updateControlsUi()
+			requestRender()
+		})
+		dom.controls.rays.addEventListener('click', () => {
+			state.raysPlaying = !state.raysPlaying
+			explorerScene.setRaysPlaying(
+				state.raysPlaying && !reduceMotion.matches,
+			)
+			updateControlsUi()
+			requestRender()
+		})
+		dom.controls.reset.addEventListener('click', resetView)
+		reduceMotion.addEventListener('change', () => {
+			explorerScene.setRaysPlaying(
+				state.raysPlaying && !reduceMotion.matches,
+			)
+			requestRender()
+		})
+	}
+
+	function bindCanvasEvents() {
+		const canvas = dom.canvas
+		controls.addEventListener('start', () => {
+			stopCameraTween()
+			state.interacting = true
+			if (!state.cameraAdjusted) {
+				state.cameraAdjusted = true
+				updateControlsUi()
+			}
+			dom.viewerHint.classList.add('is-dismissed')
+			requestRender()
+		})
+		controls.addEventListener('end', () => {
+			state.interacting = false
+			requestRender()
+		})
+		controls.addEventListener('change', requestRender)
+		canvas.addEventListener('pointerdown', (event) => {
+			state.pointerStart = { x: event.clientX, y: event.clientY }
+			state.pointerDragged = false
+		})
+		canvas.addEventListener('pointermove', (event) => {
+			if (!state.pointerStart) return
+			state.pointerDragged ||=
+				Math.hypot(
+					event.clientX - state.pointerStart.x,
+					event.clientY - state.pointerStart.y,
+				) > 6
+		})
+		canvas.addEventListener('pointercancel', () => {
+			state.pointerStart = null
+			state.pointerDragged = false
+		})
+		canvas.addEventListener('click', (event) => {
+			const shouldSelect = !state.pointerDragged
+			state.pointerStart = null
+			state.pointerDragged = false
+			if (!shouldSelect || !state.satelliteReady) return
+			const bounds = canvas.getBoundingClientRect()
+			pointer.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1
+			pointer.y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1
+			raycaster.setFromCamera(pointer, camera)
+			const target = explorerScene.pick(raycaster, getSelectedItem())
+			const item = target && tree.find(target.scene, target.component)
+			if (item && item.id !== state.selectedId)
+				navigate(item.id, { source: 'canvas' })
+		})
+	}
+
+	function bindRenderPipeline() {
+		document.addEventListener('visibilitychange', () => {
+			state.lastFrameTime = null
+			requestRender()
+		})
+		const resizeRenderer = () => {
+			const { width, height } = dom.viewer.getBoundingClientRect()
+			if (width === 0 || height === 0) return
+			viewerSize.width = width
+			viewerSize.height = height
+			camera.aspect = width / height
+			renderer.setSize(width, height, false)
+			viewOffset.setSize(width, height)
+			updateViewOffsetTarget(true)
+		}
+		new ResizeObserver(resizeRenderer).observe(dom.viewer)
+		resizeRenderer()
+	}
+
+	function activateFallback() {
+		dom.root.classList.remove('js-enhanced')
+		for (const item of dom.items) item.hidden = false
+		markers.set([])
+		setStatus(null)
+	}
+
+	function loadInitialSatellite() {
+		setStatus('loading')
+		loadSatellite(scene, {
+			onLoad: async (satellite) => {
+				const bounds = getModelStats(satellite)
+				starfield.position.copy(bounds.center)
+				starfield.scale.setScalar(bounds.radius / 4.5)
+				try {
+					const { createCadInstances } =
+						await import('./scene/objects/CadInstances.js')
+					satellite.userData.cadInstances = createCadInstances(
+						satellite,
+						getComponentFromObject,
+					)
+				} catch (error) {
+					console.error('CAD batching unavailable', error)
+				}
+				state.satelliteReady = true
+				setStatus(null)
+				applySceneState()
+			},
+			onError: activateFallback,
+		})
+	}
+
+	function initializeState() {
+		const initialId = tree.has(getHashId()) ? getHashId() : tree.rootId
+		state.selectedId = initialId
+		if (initialId !== tree.rootId) {
+			state.explorerOpen = !isMobile()
+			state.sheetState = isMobile()
+				? SHEET_STATES.PEEK
+				: SHEET_STATES.CLOSED
+		}
+		panel.showItem(initialId)
+		syncExplorerVisibility()
+		updateViewerLabel()
+		updateHint()
+		updateControlsUi()
+		language.onChange(() => {
+			dom.explorerToggleLabel.textContent =
+				language.text('exploreSatellite')
+			dom.explorerClose.setAttribute(
+				'aria-label',
+				language.text('closeExplorer'),
+			)
+			syncExplorerVisibility()
+			updateViewerLabel()
+			updateHint()
+			updateControlsUi()
+			markers.setLabels(panel.getFullTitle)
+			if (!dom.viewerStatus.hidden)
+				dom.viewerStatus.textContent = language.text(
+					dom.viewer.classList.contains('is-loading')
+						? 'loading'
+						: 'loadError',
+				)
+		})
+		language.setLanguage(language.getLanguage(), { store: false })
+	}
+
+	initializeState()
+	bindExplorerEvents()
+	bindViewerControls()
+	bindCanvasEvents()
+	bindRenderPipeline()
+	loadInitialSatellite()
+	requestRender()
+
+	if (import.meta.env.DEV)
 		window.__nebulaDebug = {
 			scene,
 			camera,
 			controls,
 			renderer,
 			motionDetail,
+			state,
+			tree,
 		}
-	}
-
-	function frameCurrentModel(viewName) {
-		if (viewName === 'instrument' || viewName === 'instrument-interior') {
-			const instrument = getInstrument()
-			if (instrument)
-				frameModelRoot(camera, controls, instrument, {
-					padding: 1.1,
-					direction: [0.9, -0.25, 1],
-				})
-			return
-		}
-
-		const satellite = getSatellite()
-		if (satellite) {
-			frameModelRoot(camera, controls, satellite, {
-				padding: 1.12,
-				direction: [0.8, 0.5, 1],
-			})
-		}
-	}
-
-	async function applyView(viewName) {
-		const request = ++viewRequest
-		highlightComponent(null)
-		selectedComponent = null
-		componentLinks.forEach((link) => link.removeAttribute('aria-current'))
-		componentDetails.forEach((detail) => {
-			detail.hidden = true
-		})
-		componentDetailsPanel.classList.remove('has-selection')
-		stopCameraTween()
-		optics.hide()
-		parts.hide()
-		instrumentComponents?.clearHighlight()
-		selectedInstrumentComponent = null
-		instrumentLinks.forEach((link) => link.removeAttribute('aria-current'))
-		instrumentDetails.forEach((detail) => {
-			detail.hidden = true
-		})
-		instrumentDetailsPanel.classList.remove('has-selection')
-		rayPlaying = false
-		playButton.setAttribute('aria-pressed', 'false')
-		if (viewName === 'satellite') {
-			showSatellite()
-			frameCurrentModel(viewName)
-		} else if (viewName === 'interior') {
-			showSatelliteInterior()
-			frameCurrentModel(viewName)
-		} else if (
-			viewName === 'instrument' ||
-			viewName === 'instrument-interior'
-		) {
-			await loadInstrument(scene)
-			if (request !== viewRequest) return
-			instrumentComponents ??= createInstrumentComponents(getInstrument())
-			getInstrument().userData.cadInstances ??= createCadInstances(
-				getInstrument(),
-				instrumentComponents.getComponent,
-			)
-			highlightComponent(null)
-			if (viewName === 'instrument-interior') showInstrumentInterior()
-			else showInstrument()
-			frameCurrentModel(viewName)
-		} else if (viewName === 'mirror' || viewName === 'rays') {
-			if (getSatellite()) getSatellite().visible = false
-			if (getInstrument()) getInstrument().visible = false
-			optics.show(viewName === 'rays')
-			rayPlaying = viewName === 'rays' && !reduceMotion.matches
-			optics.setPlaying(rayPlaying)
-			playButton.setAttribute('aria-pressed', String(rayPlaying))
-			frameModelRoot(camera, controls, optics.root, { padding: 1.1 })
-		} else if (viewName === 'parts') {
-			const part = await parts.load(partSelect.value)
-			if (request !== viewRequest) return
-			if (getSatellite()) getSatellite().visible = false
-			if (getInstrument()) getInstrument().visible = false
-			parts.show(part)
-			parts.clearSelection()
-			frameModelRoot(camera, controls, part, { padding: 1.1 })
-		}
-		activeView = viewName
-		const instrumentView = ['instrument', 'instrument-interior'].includes(
-			viewName,
-		)
-		instrumentNavigation.hidden = !instrumentView
-		instrumentDetailsPanel.hidden = !instrumentView
-		document
-			.querySelector('.experience')
-			.classList.toggle('instrument-view', instrumentView)
-		opticalSelection.hidden = true
-		opticsPanel.querySelector('.optical-components').hidden = ![
-			'mirror',
-			'rays',
-			'parts',
-		].includes(viewName)
-		opticsPanel
-			.querySelectorAll('[data-optical-component]')
-			.forEach((button) => {
-				button.hidden =
-					viewName === 'parts' &&
-					!opticalComponents[button.dataset.opticalComponent]?.cadPart
-				button.setAttribute('aria-pressed', 'false')
-			})
-		const optical = ['mirror', 'rays', 'parts'].includes(viewName)
-		opticsPanel.hidden = !optical
-		document
-			.querySelector('.experience')
-			.classList.toggle('optical-view', optical)
-		playButton.hidden = viewName !== 'rays'
-		partSelect.hidden = viewName !== 'parts'
-		opticsPanel.querySelector('label').hidden = viewName !== 'parts'
-		document.querySelector('#cad-note').hidden = viewName !== 'parts'
-		opticsPanel
-			.querySelectorAll('p:not(#cad-note):not(#optical-selection)')
-			.forEach((p) => (p.hidden = viewName === 'parts'))
-		if (viewName === 'parts') {
-			opticalSelection.textContent = `CAD part: ${partSelect.selectedOptions[0]?.textContent ?? 'Selected part'}.`
-			opticalSelection.hidden = false
-		}
-
-		viewButtons.forEach((button) => {
-			button.setAttribute(
-				'aria-pressed',
-				String(button.dataset.view === viewName),
-			)
-		})
-		requestRender()
-	}
-
-	loadSatellite(scene, {
-		onLoad: (satelliteModel) => {
-			if (!satelliteModel) return
-			const bounds = getModelStats(satelliteModel)
-			starfield.position.copy(bounds.center)
-			starfield.scale.setScalar(bounds.radius / 4.5)
-			satelliteModel.userData.cadInstances = createCadInstances(
-				satelliteModel,
-				getComponentFromObject,
-			)
-			if (import.meta.env.DEV) {
-				window.__nebulaDebug.materialMap = getSatelliteMaterialMap()
-			}
-			console.log('[satellite] loaded and framed', satelliteModel.name)
-			if (viewRequest === 0) applyView('satellite')
-			else {
-				satelliteModel.visible = ['satellite', 'interior'].includes(
-					activeView,
-				)
-				if (activeView === 'interior') showSatelliteInterior()
-				requestRender()
-			}
-		},
-		onError: activateFallback,
-	})
-
-	const starfield = createStars(14000, scene)
-
-	function resizeRenderer() {
-		const { width, height } = visualization.getBoundingClientRect()
-		if (width === 0 || height === 0) return
-		camera.aspect = width / height
-		camera.updateProjectionMatrix()
-		renderer.setSize(width, height, false)
-		requestRender()
-	}
-
-	new ResizeObserver(resizeRenderer).observe(visualization)
-	resizeRenderer()
-
-	requestRender()
-
-	function selectComponent(component, object) {
-		const link = componentLinks.find(
-			(item) => item.dataset['3dObject'] === component,
-		)
-		if (!link) return
-		if (!['satellite', 'interior'].includes(activeView))
-			applyView('satellite')
-
-		selectedComponent = component
-		if (component === 'xrayInstrument') {
-			showSatelliteInterior()
-			activeView = 'interior'
-		} else if (
-			component === 'solarPanel' &&
-			getCurrentView() === 'interior'
-		) {
-			showSatellite()
-			activeView = 'satellite'
-		}
-		viewButtons.forEach((button) =>
-			button.setAttribute(
-				'aria-pressed',
-				String(button.dataset.view === activeView),
-			),
-		)
-		highlightComponent(component)
-		const focus = getComponentFocus(component, { camera, object })
-		if (focus)
-			updateCamera(
-				controls,
-				camera,
-				focus,
-				reduceMotion.matches ? 0 : 1100,
-			)
-
-		componentLinks.forEach((item) => item.removeAttribute('aria-current'))
-		link.setAttribute('aria-current', 'true')
-		componentDetails.forEach((detail) => {
-			detail.hidden = detail.id !== link.hash.slice(1)
-		})
-		componentDetailsPanel.classList.add('has-selection')
-		setExperienceMode('explore')
-
-		updateSelectionStatus(component)
-		requestRender()
-	}
-
-	function updateSelectionStatus(component) {
-		if (!component) {
-			selectionStatus.textContent =
-				activeLanguage === 'nl'
-					? 'Verkenningsmodus actief.'
-					: 'Exploration mode active.'
-			return
-		}
-
-		const link = componentLinks.find(
-			(item) => item.dataset['3dObject'] === component,
-		)
-		const label = link?.querySelector('.component-label')?.textContent ?? ''
-		selectionStatus.textContent =
-			activeLanguage === 'nl'
-				? `${label} geselecteerd.`
-				: `${label} selected.`
-	}
-
-	function selectInstrumentComponent(component) {
-		const link = instrumentLinks.find(
-			(item) => item.dataset.instrumentComponent === component,
-		)
-		if (!link || !instrumentComponents) return
-		selectedInstrumentComponent = component
-		instrumentComponents.highlight(component)
-		const focus = instrumentComponents.getFocus(
-			component,
-			camera,
-			controls.target,
-		)
-		if (focus)
-			updateCamera(
-				controls,
-				camera,
-				focus,
-				reduceMotion.matches ? 0 : 850,
-			)
-		instrumentLinks.forEach((item) => {
-			if (item === link) item.setAttribute('aria-current', 'true')
-			else item.removeAttribute('aria-current')
-		})
-		instrumentDetails.forEach((detail) => {
-			detail.hidden = detail.id !== link.hash.slice(1)
-		})
-		instrumentDetailsPanel.classList.add('has-selection')
-		updateInstrumentStatus()
-		requestRender()
-	}
-
-	function updateInstrumentStatus() {
-		const link = instrumentLinks.find(
-			(item) =>
-				item.dataset.instrumentComponent ===
-				selectedInstrumentComponent,
-		)
-		const label = link?.querySelector('.component-label').textContent
-		document.querySelector('.instrument-status').textContent = label
-			? `${label} ${activeLanguage === 'nl' ? 'geselecteerd.' : 'selected.'}`
-			: ''
-	}
-
-	function setLanguage(language) {
-		activeLanguage = language
-		document.documentElement.lang = language
-		translatableElements.forEach((element) => {
-			element.textContent =
-				language === 'nl'
-					? element.dataset.i18nNl
-					: englishCopy.get(element)
-		})
-		languageButtons.forEach((button) => {
-			button.setAttribute(
-				'aria-pressed',
-				String(button.dataset.language === language),
-			)
-		})
-		updateSelectionStatus(selectedComponent)
-		updateInstrumentStatus()
-		updateRotationLabel()
-	}
-
-	function setExperienceMode(mode) {
-		experienceModeLinks.forEach((link) => {
-			if (link.dataset.experienceMode === mode)
-				link.setAttribute('aria-current', 'true')
-			else link.removeAttribute('aria-current')
-		})
-	}
-
-	function resetExperience() {
-		optics.hide()
-		parts.hide()
-		activeView = 'satellite'
-		instrumentComponents?.clearHighlight()
-		instrumentNavigation.hidden = true
-		instrumentDetailsPanel.hidden = true
-		document
-			.querySelector('.experience')
-			.classList.remove('instrument-view')
-		opticsPanel.hidden = true
-		document.querySelector('.experience').classList.remove('optical-view')
-		viewRequest += 1
-		stopCameraTween()
-		selectedComponent = null
-		highlightComponent(null)
-		resetSatellite(reduceMotion.matches ? 0 : 1100)
-		showSatellite()
-		frameCurrentModel('satellite')
-		viewButtons.forEach((button) => {
-			button.setAttribute(
-				'aria-pressed',
-				String(button.dataset.view === 'satellite'),
-			)
-		})
-		componentLinks.forEach((link) => link.removeAttribute('aria-current'))
-		componentDetails.forEach((detail) => (detail.hidden = true))
-		componentDetailsPanel.classList.remove('has-selection')
-		setExperienceMode('explore')
-		updateSelectionStatus(null)
-		requestRender()
-	}
-
-	function activateFallback() {
-		document.documentElement.classList.remove('js-enhanced')
-		visualization.classList.add('model-unavailable')
-		componentDetails.forEach((detail) => (detail.hidden = false))
-		instrumentDetails.forEach((detail) => (detail.hidden = false))
-	}
-
-	document.documentElement.classList.add('js-enhanced')
-	componentDetails.forEach((detail) => (detail.hidden = true))
-
-	componentLinks.forEach((link) => {
-		link.addEventListener('click', (event) => {
-			event.preventDefault()
-			history.replaceState(null, '', link.hash)
-			selectComponent(link.dataset['3dObject'])
-		})
-	})
-	instrumentLinks.forEach((link) =>
-		link.addEventListener('click', (event) => {
-			if (!document.documentElement.classList.contains('js-enhanced'))
-				return
-			event.preventDefault()
-			selectInstrumentComponent(link.dataset.instrumentComponent)
-		}),
-	)
-
-	experienceModeLinks.forEach((link) => {
-		link.addEventListener('click', (event) => {
-			event.preventDefault()
-			if (link.dataset.experienceMode === 'explore') {
-				history.replaceState(null, '', window.location.pathname)
-				resetExperience()
-			}
-		})
-	})
-
-	viewButtons.forEach((button) => {
-		button.addEventListener('click', () => {
-			const viewName = button.dataset.view
-			applyView(viewName).catch((error) => {
-				console.error('View failed', error)
-				selectionStatus.textContent =
-					activeLanguage === 'nl'
-						? 'Model laden mislukt. Probeer opnieuw.'
-						: 'Model loading failed. Please try again.'
-			})
-		})
-	})
-
-	languageButtons.forEach((button) => {
-		button.addEventListener('click', () => {
-			setLanguage(button.dataset.language)
-			requestRender()
-		})
-	})
-
-	const rotationButton = document.querySelector('#rotation-toggle')
-	function updateRotationLabel() {
-		rotationButton.textContent =
-			activeLanguage === 'nl'
-				? rotationPaused
-					? 'Draaien hervatten'
-					: 'Draaien pauzeren'
-				: rotationPaused
-					? 'Resume rotation'
-					: 'Pause rotation'
-	}
-	rotationButton.addEventListener('click', () => {
-		rotationPaused = !rotationPaused
-		rotationButton.setAttribute('aria-pressed', String(rotationPaused))
-		updateRotationLabel()
-		requestRender()
-	})
-	const opticalSelection = document.querySelector('#optical-selection')
-	const opticalButtons = document.querySelectorAll('[data-optical-component]')
-	opticalButtons.forEach((button) => {
-		button.textContent =
-			opticalComponents[button.dataset.opticalComponent].label
-	})
-	Array.from(partSelect.options).forEach((option) => {
-		option.textContent = opticalComponents[option.value].label
-	})
-	function explainOptics(key) {
-		const component = opticalComponents[key]
-		if (!component) return
-		opticalSelection.textContent =
-			component.label + ': ' + component.description
-		opticalSelection.hidden = false
-		opticalButtons.forEach((button) =>
-			button.setAttribute(
-				'aria-pressed',
-				String(button.dataset.opticalComponent === key),
-			),
-		)
-	}
-	async function selectOpticalComponent(key) {
-		const component = opticalComponents[key]
-		if (!component) return
-		if (activeView === 'parts') {
-			if (!component.cadPart) return
-			if (parts.getActive()?.userData.opticalComponent !== key) {
-				partSelect.value = component.cadPart
-				await applyView('parts')
-			}
-			if (
-				activeView !== 'parts' ||
-				parts.getActive()?.userData.opticalComponent !== key
-			)
-				return
-			parts.highlightAll()
-		} else optics.select(key)
-		explainOptics(key)
-		requestRender()
-	}
-	opticalButtons.forEach((button) =>
-		button.addEventListener('click', () =>
-			selectOpticalComponent(button.dataset.opticalComponent).catch(
-				() => {
-					selectionStatus.textContent =
-						'CAD part could not be loaded.'
-				},
-			),
-		),
-	)
-	partSelect.addEventListener('change', () =>
-		selectOpticalComponent(partSelect.value).catch(() => {
-			selectionStatus.textContent = 'CAD part could not be loaded.'
-		}),
-	)
-	playButton.addEventListener('click', () => {
-		rayPlaying = !rayPlaying
-		optics.setPlaying(rayPlaying && !reduceMotion.matches)
-		playButton.setAttribute(
-			'aria-pressed',
-			String(rayPlaying && !reduceMotion.matches),
-		)
-		requestRender()
-	})
-	reduceMotion.addEventListener('change', () => {
-		if (reduceMotion.matches) {
-			optics.setPlaying(false)
-			rayPlaying = false
-			playButton.setAttribute('aria-pressed', 'false')
-			requestRender()
-		}
-	})
-
-	canvas.addEventListener('pointerdown', (event) => {
-		pointerStart = { x: event.clientX, y: event.clientY }
-		pointerDragged = false
-	})
-
-	canvas.addEventListener('pointermove', (event) => {
-		if (!pointerStart) return
-		pointerDragged ||=
-			Math.hypot(
-				event.clientX - pointerStart.x,
-				event.clientY - pointerStart.y,
-			) > 6
-	})
-
-	canvas.addEventListener('pointercancel', () => {
-		pointerStart = null
-		pointerDragged = false
-	})
-
-	canvas.addEventListener('click', (event) => {
-		const shouldSelect = !pointerDragged
-		pointerStart = null
-		pointerDragged = false
-		if (!shouldSelect) return
-
-		const satellite = getSatellite()
-
-		const bounds = canvas.getBoundingClientRect()
-		pointer.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1
-		pointer.y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1
-		raycaster.setFromCamera(pointer, camera)
-		if (['mirror', 'rays'].includes(activeView)) {
-			raycaster.params.Line.threshold = 0.035
-			const hit = raycaster
-				.intersectObject(optics.root, true)
-				.find(
-					(hit) =>
-						isObjectVisible(hit.object) &&
-						hit.object.userData.component,
-				)
-			if (hit) selectOpticalComponent(hit.object.userData.component)
-			return
-		}
-		if (['instrument', 'instrument-interior'].includes(activeView)) {
-			const root = getInstrument()
-			if (!root) return
-			const hit = raycaster
-				.intersectObject(root, true)
-				.find((hit) => isObjectVisible(hit.object))
-			const component =
-				hit && instrumentComponents?.getComponent(hit.object)
-			if (component) selectInstrumentComponent(component)
-			return
-		}
-		if (activeView === 'parts') {
-			const root = parts.getActive()
-			if (!root) return
-			const hit = raycaster
-				.intersectObject(root, true)
-				.find((hit) => isObjectVisible(hit.object))
-			if (hit)
-				selectOpticalComponent(parts.getComponent(hit.object)).catch(
-					() => {
-						selectionStatus.textContent =
-							'CAD part could not be loaded.'
-					},
-				)
-			return
-		}
-		if (!satellite) return
-		const hit = raycaster
-			.intersectObjects(getSelectableComponentMeshes(), false)
-			.find((hit) => isObjectVisible(hit.object))
-		const component = hit && getComponentFromObject(hit.object)
-		if (component) selectComponent(component, hit.object)
-	})
 }
 
 try {
-	initializeExperience()
-} catch {
+	initializeExplorer()
+} catch (error) {
+	console.error('Explorer failed to start', error)
 	document.documentElement.classList.remove('js-enhanced')
 }

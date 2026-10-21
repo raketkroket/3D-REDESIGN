@@ -94,6 +94,14 @@ export function createOptics(scene) {
 	root.add(rays)
 	scene.add(root)
 	const selection = createSelectionHighlight(root, { ghostOpacity: 0.16 })
+	const anchors = {
+		primary: new THREE.Vector3(-0.8, 0.72, 0),
+		secondary: new THREE.Vector3(0.71, -0.36, 0),
+		rays: new THREE.Vector3(0.48, 1.4, 0),
+		tube: new THREE.Vector3(0.23, -2.02, 0),
+		fpcm: new THREE.Vector3(-0.19, -2.5, 0),
+		fpm: new THREE.Vector3(0.06, -2.5, 0),
+	}
 	const selectableMeshes = (component) => {
 		const meshes = []
 		root.traverse((object) => {
@@ -123,6 +131,15 @@ export function createOptics(scene) {
 		select(component) {
 			selection.apply(selectableMeshes(component))
 		},
+		preview(component) {
+			selection.preview(component ? selectableMeshes(component) : [])
+		},
+		getAnchor(component) {
+			const anchor = anchors[component]
+			if (!anchor) return null
+			root.updateWorldMatrix(true, false)
+			return root.localToWorld(anchor.clone())
+		},
 		clearSelection() {
 			selection.clear()
 		},
@@ -131,6 +148,9 @@ export function createOptics(scene) {
 		},
 		isAnimating() {
 			return root.visible && rays.visible && playing
+		},
+		hasRays() {
+			return rays.visible
 		},
 		update(time) {
 			markers.forEach((marker, i) => {
@@ -166,6 +186,7 @@ const partUrls = {
 }
 export function createPartViewer(scene) {
 	const cache = new Map()
+	const loaded = new Map()
 	const highlights = new Map()
 	let active = null
 	const getHighlight = (root) => {
@@ -185,6 +206,12 @@ export function createPartViewer(scene) {
 		},
 		getActive() {
 			return active
+		},
+		isLoaded(key) {
+			return loaded.has(key)
+		},
+		getLoaded(key) {
+			return loaded.get(key) ?? null
 		},
 		hide() {
 			if (active) {
@@ -212,6 +239,7 @@ export function createPartViewer(scene) {
 							root.visible = false
 							scene.add(root)
 							getHighlight(root)
+							loaded.set(key, root)
 							return root
 						})
 						.catch((error) => {
