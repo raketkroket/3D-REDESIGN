@@ -3,13 +3,8 @@ name: Verify viewer performance
 on:
   push:
     branches:
-      - perf/viewer-assets
-    paths:
-      - "src/**"
-      - "verify-*.mjs"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/verify-viewer-performance.yml"
+      - main
+  pull_request:
   workflow_dispatch:
 
 jobs:
@@ -24,8 +19,6 @@ jobs:
           cache: npm
 
       - run: npm ci
-      - run: node verify-viewer-assets.mjs
-      - run: node verify-models.mjs
-      - run: node verify-performance.mjs
-      - run: node verify-optics.mjs
+      - run: npm run format:check
+      - run: npm run verify
       - run: npm run build
