@@ -15,6 +15,7 @@ export function createViewerState(rootId) {
 		rotationPaused: false,
 		cameraAdjusted: false,
 		interacting: false,
+		lastInteractionTime: -Infinity,
 		satelliteReady: false,
 		viewRequest: 0,
 		frameRequest: null,

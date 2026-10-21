@@ -31,5 +31,7 @@ export function createDomBindings() {
 			]),
 		),
 		languageButtons: [...document.querySelectorAll('[data-language]')],
+		status: document.querySelector('[data-explorer-status]'),
+		fallbackNotice: document.querySelector('[data-fallback-notice]'),
 	}
 }

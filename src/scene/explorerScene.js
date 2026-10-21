@@ -29,6 +29,29 @@ const representationsByScene = {
 	'cad-part': 'part',
 }
 
+const orbitDefaults = { period: 46, easeIn: 3 }
+const componentOrbits = {
+	xrayInstrument: { azimuth: 14, elevation: 4 },
+	sunSensor: { azimuth: 16, elevation: 4 },
+	solarPanel: { azimuth: 20, elevation: 5 },
+}
+
+export function getOrbitSettings(item) {
+	const scene = item.scene
+	let settings = null
+	if (scene === 'satellite-component')
+		settings = componentOrbits[item.component] ?? {
+			azimuth: 24,
+			elevation: 5,
+		}
+	else if (scene === 'instrument') settings = { azimuth: 28, elevation: 6 }
+	else if (scene === 'instrument-component')
+		settings = { azimuth: 18, elevation: 4 }
+	else if (scene === 'cad-part')
+		settings = { azimuth: 40, elevation: 8, period: 56 }
+	return settings ? { ...orbitDefaults, ...settings } : null
+}
+
 const satelliteFraming = { padding: 1.12, direction: [0.8, 0.5, 1] }
 const instrumentFraming = { padding: 1.24, direction: [0.9, -0.25, 1] }
 const opticsFraming = { padding: 1.28 }
@@ -243,8 +266,11 @@ export function createExplorerScene({ scene, camera, controls }) {
 		representation = next
 		return {
 			representation: next,
+			orbit: getOrbitSettings(item),
 			controls: {
-				rotation: item.scene === 'satellite',
+				rotation:
+					item.scene === 'satellite' ||
+					Boolean(getOrbitSettings(item)),
 				outerPanels: hasOuterPanels(item),
 				rays: ['optical-path', 'optical-component'].includes(
 					item.scene,

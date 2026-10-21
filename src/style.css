@@ -9,7 +9,8 @@
 	--text: rgb(255 255 255 / 80%);
 	--text-muted: rgb(255 255 255 / 64%);
 	--line: rgb(255 255 255 / 16%);
-	--font-display: 'Space Grotesk', Roboto, Verdana, 'Helvetica Neue', sans-serif;
+	--font-display:
+		'Space Grotesk', Roboto, Verdana, 'Helvetica Neue', sans-serif;
 	--font-body: 'Space Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
 	--font-label: Roboto, 'Helvetica Neue', Arial, sans-serif;
 	--ease: cubic-bezier(0.2, 0, 0, 1);
@@ -94,7 +95,7 @@ button {
 	transform: none;
 }
 
-.noscript-notice {
+.page-notice {
 	margin: 0;
 	padding: 16px 24px;
 	color: var(--navy);
@@ -237,12 +238,10 @@ button {
 	padding: 0;
 	border-bottom: 1px solid var(--line);
 	list-style: none;
-	counter-reset: explorer-item;
 }
 
 .explorer-list li {
 	border-top: 1px solid var(--line);
-	counter-increment: explorer-item;
 }
 
 .explorer-list a {
@@ -256,13 +255,12 @@ button {
 	transition: background-color 150ms var(--ease);
 }
 
-.explorer-list a::before {
-	content: counter(explorer-item, decimal-leading-zero);
+.explorer-list-number {
 	color: var(--orange);
 	font: 400 12px/1 var(--font-body);
 }
 
-.explorer-list a.has-children::after {
+.explorer-list a:has(.explorer-list-meta)::after {
 	content: '';
 	width: 8px;
 	height: 8px;
@@ -278,8 +276,8 @@ button {
 	background: rgb(255 255 255 / 5%);
 }
 
-.explorer-list a.has-children:hover::after,
-.explorer-list a.has-children.is-previewed::after {
+.explorer-list a:has(.explorer-list-meta):hover::after,
+.explorer-list a:has(.explorer-list-meta).is-previewed::after {
 	transform: translateX(3px) rotate(45deg);
 }
 
@@ -368,6 +366,56 @@ button {
 
 .explorer-credits a {
 	font-size: 14px;
+}
+
+.explorer-item-breadcrumb ol {
+	display: flex;
+	flex-wrap: wrap;
+	margin: 0 0 24px;
+	padding: 0;
+	color: var(--text-muted);
+	font: 400 12px/20px var(--font-body);
+	list-style: none;
+}
+
+.explorer-item-breadcrumb li + li::before {
+	content: '›';
+	margin: 0 8px;
+	color: rgb(255 255 255 / 32%);
+}
+
+.explorer-item-breadcrumb a,
+.explorer-back a {
+	color: inherit;
+	text-decoration: none;
+}
+
+.explorer-item-breadcrumb a:hover,
+.explorer-back a:hover {
+	color: var(--text-strong);
+	text-decoration: underline 1px var(--orange);
+	text-underline-offset: 4px;
+}
+
+.explorer-item-breadcrumb [aria-current] {
+	color: var(--text-strong);
+}
+
+.explorer-back {
+	margin: 32px 0 0;
+	color: var(--text);
+	font: 500 14px/20px var(--font-display);
+}
+
+.explorer-back a::before {
+	content: '‹';
+	margin-right: 8px;
+	color: var(--orange);
+}
+
+.js-enhanced .explorer-item-breadcrumb,
+html:not(.js) .language-switcher {
+	display: none;
 }
 
 .explorer-breadcrumb ol {

@@ -18,8 +18,12 @@ const interfaceCopy = {
 		loadError: 'This 3D view could not be loaded.',
 		schematic: 'Schematic · not to scale',
 		cadPart: 'Supplied CAD part',
-		inside: 'inside',
-		about: 'About',
+		showFullPath: 'Show full path',
+		previous: 'Previous',
+		next: 'Next',
+		selected: 'selected',
+		fallback:
+			'The interactive 3D model is not available on this device. All satellite information is available below.',
 	},
 	nl: {
 		exploreSatellite: 'Verken satelliet',
@@ -40,8 +44,12 @@ const interfaceCopy = {
 		loadError: 'Deze 3D-weergave kon niet worden geladen.',
 		schematic: 'Schematisch · niet op schaal',
 		cadPart: 'Aangeleverd CAD-onderdeel',
-		inside: 'binnenin',
-		about: 'Over',
+		showFullPath: 'Volledig pad tonen',
+		previous: 'Vorige',
+		next: 'Volgende',
+		selected: 'geselecteerd',
+		fallback:
+			'Het interactieve 3D-model is niet beschikbaar op dit apparaat. Alle informatie over de satelliet staat hieronder.',
 	},
 }
 

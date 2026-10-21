@@ -27,12 +27,14 @@ import { createRenderer } from './scene/renderer.js'
 import { createScene } from './scene/scene.js'
 import { isCameraMoving, stopCameraTween } from './scene/updateCamera.js'
 import { createViewOffset } from './scene/viewOffset.js'
+import { createCameraOrbit } from './scene/cameraOrbit.js'
 
 const mobileQuery = window.matchMedia('(max-width: 899px)')
 const wideQuery = window.matchMedia('(min-width: 1280px)')
 const coarsePointerQuery = window.matchMedia('(pointer: coarse)')
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
 const selectionSources = new Set(['list', 'marker', 'canvas'])
+const orbitResumeDelay = 3500
 
 function wait(milliseconds) {
 	return new Promise((resolve) => setTimeout(resolve, milliseconds))
@@ -50,15 +52,29 @@ function readPixels(element, property) {
 	return parseFloat(getComputedStyle(element).getPropertyValue(property)) || 0
 }
 
+function showFallbackNotice(dom, language) {
+	const update = () => {
+		dom.fallbackNotice.textContent = language.text('fallback')
+	}
+	update()
+	dom.fallbackNotice.hidden = false
+	language.onChange(update)
+}
+
 function initializeExplorer() {
 	const dom = createDomBindings()
+	if (!dom.items.length) return
+	dom.root.classList.add('js')
+	const language = createLanguage(dom)
 	const renderer = createRenderer()
-	if (!renderer || !dom.items.length) return
+	if (!renderer) {
+		showFallbackNotice(dom, language)
+		return
+	}
 
 	dom.root.classList.add('js-enhanced')
 	const tree = createExplorerTree(readExplorerItems(dom.items))
 	const state = createViewerState(tree.rootId)
-	const language = createLanguage(dom)
 	const panel = createExplorerPanel(dom, tree, language)
 	const scene = createScene(requestRender)
 	const camera = createCamera()
@@ -67,6 +83,7 @@ function initializeExplorer() {
 	const renderQuality = createRenderQuality(renderer)
 	const motionDetail = createMotionDetail()
 	const viewOffset = createViewOffset(camera)
+	const cameraOrbit = createCameraOrbit(camera, controls)
 	const explorerScene = createExplorerScene({ scene, camera, controls })
 	const starfield = createStars(14000, scene)
 	const raycaster = new THREE.Raycaster()
@@ -105,17 +122,24 @@ function initializeExplorer() {
 		state.lastFrameTime = time
 		TWEEN.update(time)
 		const tweening = TWEEN.getAll().some((tween) => tween.isPlaying())
-		controls.autoRotate =
+		const ambientMotionAllowed =
 			state.satelliteReady &&
-			getSelectedItem().scene === 'satellite' &&
 			!state.rotationPaused &&
 			!state.interacting &&
 			!reduceMotion.matches &&
-			!tweening
+			!tweening &&
+			time - state.lastInteractionTime > orbitResumeDelay
+		controls.autoRotate =
+			ambientMotionAllowed && getSelectedItem().scene === 'satellite'
+		const orbiting = cameraOrbit.update(
+			Math.min(frameMs / 1000, 0.25),
+			ambientMotionAllowed,
+		)
 		updateControls(delta)
 		const offsetMoving = viewOffset.update(delta || 1 / 60)
 		const moving =
 			controls.autoRotate ||
+			orbiting ||
 			state.interacting ||
 			tweening ||
 			offsetMoving ||
@@ -323,6 +347,7 @@ function initializeExplorer() {
 		}
 		stopCameraTween()
 		const result = explorerScene.apply(item, getSceneOptions(1000))
+		cameraOrbit.setSettings(result.orbit)
 		dom.viewer.classList.remove('is-switching')
 		dom.viewer.dataset.representation = result.representation
 		availableControls = result.controls
@@ -336,6 +361,13 @@ function initializeExplorer() {
 		return tree.getDepth(nextId) < tree.getDepth(previousId)
 			? 'back'
 			: 'forward'
+	}
+
+	function announce(id) {
+		dom.status.textContent = ''
+		setTimeout(() => {
+			dom.status.textContent = `${panel.getFullTitle(id)}, ${panel.getKicker(id)}`
+		}, 60)
 	}
 
 	function revealSelection(id, source, keyboard) {
@@ -358,7 +390,7 @@ function initializeExplorer() {
 
 	function navigate(
 		id,
-		{ source = 'list', push = true, focus = false } = {},
+		{ source = 'list', push = true, focus = false, keyboard = false } = {},
 	) {
 		const nextId = tree.has(id) ? id : tree.rootId
 		const previousId = state.selectedId
@@ -368,14 +400,20 @@ function initializeExplorer() {
 		setPreview(null)
 		panel.showItem(nextId, { direction: getDirection(previousId, nextId) })
 		updateViewerLabel()
-		revealSelection(nextId, source, focus)
+		revealSelection(nextId, source, keyboard)
 		if (changed || source === 'history') applySceneState()
 		if (focus) panel.focusTitle()
+		else if (changed) announce(nextId)
 	}
 
 	function resetView() {
 		state.cameraAdjusted = false
-		explorerScene.apply(getSelectedItem(), getSceneOptions(800))
+		const result = explorerScene.apply(
+			getSelectedItem(),
+			getSceneOptions(800),
+		)
+		cameraOrbit.setSettings(result.orbit)
+		state.lastInteractionTime = -Infinity
 		updateControlsUi()
 		requestRender()
 	}
@@ -393,7 +431,8 @@ function initializeExplorer() {
 				event.preventDefault()
 				navigate(link.hash.slice(1), {
 					source: getLinkSource(link),
-					focus: event.detail === 0,
+					focus: true,
+					keyboard: event.detail === 0,
 				})
 				return
 			}
@@ -450,6 +489,16 @@ function initializeExplorer() {
 		})
 		document.addEventListener('keydown', (event) => {
 			if (event.key !== 'Escape') return
+			const parent = tree.getParent(state.selectedId)
+			if (parent && dom.explorer.contains(document.activeElement)) {
+				event.preventDefault()
+				navigate(parent.id, {
+					source: 'breadcrumb',
+					focus: true,
+					keyboard: true,
+				})
+				return
+			}
 			if (isMobile()) {
 				if (state.sheetState === SHEET_STATES.EXPANDED)
 					setSheetState(SHEET_STATES.PEEK)
@@ -507,6 +556,7 @@ function initializeExplorer() {
 		controls.addEventListener('start', () => {
 			stopCameraTween()
 			state.interacting = true
+			state.lastInteractionTime = performance.now()
 			if (!state.cameraAdjusted) {
 				state.cameraAdjusted = true
 				updateControlsUi()
@@ -516,6 +566,8 @@ function initializeExplorer() {
 		})
 		controls.addEventListener('end', () => {
 			state.interacting = false
+			state.lastInteractionTime = performance.now()
+			setTimeout(requestRender, orbitResumeDelay + 50)
 			requestRender()
 		})
 		controls.addEventListener('change', requestRender)
@@ -572,6 +624,7 @@ function initializeExplorer() {
 
 	function activateFallback() {
 		dom.root.classList.remove('js-enhanced')
+		showFallbackNotice(dom, language)
 		for (const item of dom.items) item.hidden = false
 		markers.set([])
 		setStatus(null)
@@ -653,6 +706,7 @@ function initializeExplorer() {
 			controls,
 			renderer,
 			motionDetail,
+			cameraOrbit,
 			state,
 			tree,
 		}

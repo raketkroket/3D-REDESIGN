@@ -37,42 +37,6 @@ export function createExplorerPanel(dom, tree, language) {
 		)
 	}
 
-	function renderKicker(id) {
-		const element = getItemElement(id)
-		const kicker = element?.querySelector('.explorer-kicker')
-		if (!kicker) return
-		const category = language.attribute(element, 'category')
-		const number = tree.getNumber(id)
-		kicker.textContent = number ? `${category} ${number}` : category
-	}
-
-	function renderChildMeta(id) {
-		const element = getItemElement(id)
-		for (const link of element?.querySelectorAll('.explorer-list a') ??
-			[]) {
-			const childCount = tree.getChildren(link.hash.slice(1)).length
-			let meta = link.querySelector('.explorer-list-meta')
-			if (!childCount) {
-				meta?.remove()
-				link.classList.remove('has-children')
-				continue
-			}
-			if (!meta) {
-				meta = createElement('span', 'explorer-list-meta')
-				link.append(meta)
-			}
-			link.classList.add('has-children')
-			meta.replaceChildren(
-				String(childCount),
-				createElement(
-					'span',
-					'visually-hidden',
-					` ${language.text('inside')}`,
-				),
-			)
-		}
-	}
-
 	function renderBreadcrumb(id) {
 		const path = tree.getPath(id)
 		const collapse =
@@ -91,10 +55,10 @@ export function createExplorerPanel(dom, tree, language) {
 					button.type = 'button'
 					button.setAttribute(
 						'aria-label',
-						path
+						`${language.text('showFullPath')}: ${path
 							.slice(1, -2)
 							.map((hiddenItem) => getTitle(hiddenItem.id))
-							.join(' / '),
+							.join(', ')}`,
 					)
 					button.addEventListener('click', () => {
 						breadcrumbExpanded = true
@@ -136,6 +100,10 @@ export function createExplorerPanel(dom, tree, language) {
 				getFullTitle(item.id),
 			),
 		)
+		link.setAttribute(
+			'aria-label',
+			`${language.text(direction)}: ${tree.getNumber(item.id)}, ${getFullTitle(item.id)}`,
+		)
 		return link
 	}
 
@@ -159,8 +127,6 @@ export function createExplorerPanel(dom, tree, language) {
 	}
 
 	function render(id) {
-		renderKicker(id)
-		renderChildMeta(id)
 		renderBreadcrumb(id)
 		renderPager(id)
 	}
@@ -186,6 +152,14 @@ export function createExplorerPanel(dom, tree, language) {
 			link.classList.toggle('is-previewed', link.hash === `#${id}`)
 	}
 
+	function getKicker(id) {
+		return (
+			getItemElement(id)
+				?.querySelector('.explorer-kicker')
+				?.textContent.trim() ?? ''
+		)
+	}
+
 	function focusTitle() {
 		const title =
 			getItemElement(currentId)?.querySelector('.explorer-title')
@@ -199,6 +173,7 @@ export function createExplorerPanel(dom, tree, language) {
 	return {
 		focusTitle,
 		getFullTitle,
+		getKicker,
 		getTitle,
 		setPreview,
 		showItem,

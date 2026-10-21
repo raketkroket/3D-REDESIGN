@@ -57,15 +57,29 @@ Satellite
 
 There is one explorer state: the selected item. It determines the panel content, breadcrumb, URL hash, camera framing, highlight, cutaway, which model is shown (satellite, detailed instrument, schematic or CAD part), the numbered markers and the contextual controls. Selecting an item in the panel, clicking a marker or clicking the model produces the same state.
 
-### Progressive enhancement
+### Progressive enhancement and accessibility
 
-All content lives in `index.html` as `<article data-explorer-item>` elements with real links. Without JavaScript or WebGL the page is a readable document with the same information and links. Every item is deep-linkable through its id, for example `/#instrument-detectors`.
+All content lives in `index.html` as `<article data-explorer-item>` elements with real links. Without JavaScript or WebGL the page becomes a normal scrolling document with the same hierarchy: every item has its breadcrumb, numbered label, heading, confirmed description, numbered child links and a back link. Every item is deep-linkable through its id, for example `/#instrument-detectors`.
+
+With JavaScript the same HTML becomes the explorer panel, and the 3D model enhances it:
+
+- the HTML explorer is the accessible interaction layer; the canvas is a single labelled image, and the numbered markers on the model are hidden from assistive technology because the matching list links ("05, Sun Sensor") carry the same action
+- selecting an item in the panel moves focus to its heading; selecting on the model announces the item through a status message
+- Escape moves up one level inside the explorer and closes it at the top level
+- controls expose their state (`aria-expanded`, `aria-pressed`) and change their label where the action changes
+- `prefers-reduced-motion` removes camera flights, the ambient orbit and the X-ray animation
+
+Only confirmed content is shown. An item without a confirmed description simply has no description paragraph; there are no placeholder texts.
+
+### Camera behaviour
+
+Selecting an item flies the camera to a good viewing angle for it. After the flight a slow, eased orbit continues around the selected component within a per-item range (narrower for the X-ray cutaway, none for the optics schematic). Dragging takes over immediately; the orbit resumes after a few seconds of inactivity. **Pause rotation** stops it.
 
 ### Adding or removing an item
 
-1. Add or remove an `<article data-explorer-item>` with a unique `id`, a title, `data-category` / `data-category-nl` and its `data-scene` (plus `data-component` where needed).
-2. Add or remove the matching link in the parent's `.explorer-list`. The list order determines the numbers in the panel and on the markers.
-3. Run `node verify-explorer.mjs`.
+1. Add or remove an `<article data-explorer-item>` with a unique `id`, `data-scene` (plus `data-component` where needed), a numbered kicker, a title heading one level below its parent, its breadcrumb and a back link to its parent. Copy a sibling article as a template.
+2. Add or remove the matching numbered link in the parent's `.explorer-list` and update the numbers of the following siblings and the parent's child count.
+3. Run `node verify-explorer.mjs`. It reports any mismatch in numbers, counts, headings, breadcrumbs, back links or scene mapping.
 
 Supported scenes: `satellite`, `satellite-component`, `instrument`, `instrument-component`, `optics`, `optical-path`, `optical-component`, `cad-parts`, `cad-part`. Satellite component ids are defined in `src/scene/objects/Satellite.js`; instrument part ids in `src/scene/objects/InstrumentComponents.js`.
 
@@ -99,4 +113,4 @@ npm run format:check
 npm run verify
 ```
 
-`npm run verify` runs every verification script: viewer assets, models, optics, performance, motion detail, CAD transforms and the explorer hierarchy.
+`npm run verify` runs every verification script: viewer assets, models, optics, performance, motion detail, CAD transforms, the explorer hierarchy and the camera orbit.
