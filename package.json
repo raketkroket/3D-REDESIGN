@@ -4,19 +4,28 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite dev",
     "build": "vite build",
     "preview": "vite preview",
-    "format": "prettier --write \"src/**/*.{js,mjs}\" \"scripts/**/*.{js,mjs}\" \"verify-*.mjs\"",
-    "format:check": "prettier --check --end-of-line auto \"src/**/*.{js,mjs}\" \"scripts/**/*.{js,mjs}\" \"verify-*.mjs\"",
-    "verify": "node verify-viewer-assets.mjs && node verify-models.mjs && node verify-optics.mjs && node verify-performance.mjs && node verify-motion-detail.mjs && node verify-cad-transforms.mjs && node verify-explorer.mjs && node verify-camera-orbit.mjs"
+    "format": "prettier --write \"src/**/*.{js,mjs,svelte}\" \"scripts/**/*.{js,mjs}\" \"verify-*.mjs\"",
+    "format:check": "prettier --check --end-of-line auto \"src/**/*.{js,mjs,svelte}\" \"scripts/**/*.{js,mjs}\" \"verify-*.mjs\"",
+    "verify": "node verify-viewer-assets.mjs && node verify-models.mjs && node verify-optics.mjs && node verify-performance.mjs && node verify-motion-detail.mjs && node verify-cad-transforms.mjs && node verify-explorer.mjs && node verify-camera-orbit.mjs",
+    "prepare": "svelte-kit sync || echo \"\""
   },
   "devDependencies": {
+    "@sveltejs/adapter-static": "^4.0.0",
+    "@sveltejs/kit": "^3.1.0",
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "prettier": "3.9.10",
-    "vite": "^8.0.1"
+    "prettier-plugin-svelte": "^4.1.1",
+    "svelte": "^5.57.2",
+    "vite": "^8.3.5"
   },
   "dependencies": {
     "meshoptimizer": "^0.25.0",
     "three": "^0.183.2"
+  },
+  "engines": {
+    "node": ">=22.17"
   }
 }

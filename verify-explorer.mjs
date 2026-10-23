@@ -15,7 +15,12 @@ const instrumentComponents = [
 	'support',
 ]
 const voidElements = new Set(['img', 'meta', 'link', 'br', 'input', 'path'])
-const html = await fs.readFile(new URL('./index.html', import.meta.url), 'utf8')
+const page = await fs
+	.readFile(new URL('./dist/index.html', import.meta.url), 'utf8')
+	.catch(() => {
+		throw new Error('Run npm run build before verifying the explorer')
+	})
+const html = page.slice(page.indexOf('<main'), page.indexOf('</main>') + 7)
 const attribute = (attributes, name) =>
 	attributes.match(new RegExp(`(?:^|\\s)${name}(?:="([^"]*)")?(?=\\s|$)`))
 		? (attributes.match(new RegExp(`(?:^|\\s)${name}="([^"]*)"`))?.[1] ??
@@ -37,6 +42,7 @@ for (const match of html.matchAll(
 	const tag = tagName.toLowerCase()
 	const attributes = rawAttributes.trim()
 	if (closing) {
+		if (voidElements.has(tag)) continue
 		const element = elementStack.pop()
 		assert.equal(element.tag, tag, `unbalanced </${tag}>`)
 		if (element.item) itemStack.pop()
@@ -139,7 +145,7 @@ for (const component of satelliteComponents)
 	assert(tree.find('satellite-component', component), component)
 for (const component of instrumentComponents)
 	assert(tree.find('instrument-component', component), component)
-assert(/role="status"[^>]*data-explorer-status/.test(html), 'status region')
+assert(/role="status"[^>]*data-explorer-status/.test(page), 'status region')
 
 console.log(
 	JSON.stringify({

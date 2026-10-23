@@ -22,6 +22,7 @@ We aimed to make the experience informative, interactive, and engaging for users
 To bring this concept to life, we used:
 
 Three.js for the 3D interactive experience
+SvelteKit (Svelte 5) for the page, the explorer and its state
 Vite for fast development and performance
 Goal
 
@@ -62,9 +63,9 @@ There is one explorer state: the selected item. It determines the expanded path,
 
 ### Progressive enhancement and accessibility
 
-All content lives in `index.html` as one nested semantic list: every item is an `<li data-explorer-item>` with a heading containing a real link, a body with its confirmed description, and a nested `<ol>` of its parts. Without JavaScript or WebGL the page is a normal, fully expanded scrolling document with the same hierarchy, numbering and links. Every item is deep-linkable through its id, for example `/#instrument-detectors`.
+All content lives in `src/app/explorerContent.js` (English and Dutch side by side). SvelteKit prerenders it into one nested semantic list: every item is an `<li data-explorer-item>` with a heading containing a real link, a body with its confirmed description, and a nested `<ol>` of its parts. Without JavaScript or WebGL the page is a normal, fully expanded scrolling document with the same hierarchy, numbering and links. Every item is deep-linkable through its id, for example `/#instrument-detectors`.
 
-With JavaScript the same HTML becomes the explorer, and the 3D model enhances it:
+With JavaScript Svelte hydrates the same HTML into the explorer, and the 3D model enhances it:
 
 - item links expose `aria-expanded` and `aria-controls`; collapsed parts are inert, so they are skipped by keyboard and screen readers
 - the selected item is marked with `aria-current`, and selections are announced through a status message ("05, Sun Sensor, selected")
@@ -81,9 +82,9 @@ Selecting an item flies the camera to a good viewing angle for it. After the fli
 
 ### Adding or removing an item
 
-1. Add or remove an `<li class="explorer-node" data-explorer-item>` in its parent's `.explorer-tree` with a unique `id`, `data-scene` (plus `data-component` where needed), a heading one level below its parent containing the numbered link, and a `.explorer-node-body`. Copy a sibling as a template.
-2. Update the numbers of the following siblings and the parent's child count.
-3. Run `node verify-explorer.mjs`. It reports any mismatch in nesting, numbers, counts, heading levels or scene mapping.
+1. Add or remove an entry in the `children` of its parent in `src/app/explorerContent.js`: a unique `id`, a `scene` (plus `component` where needed), a `title` and its `blocks` (`lead`, `note` or `about` paragraphs), each text with `en` and `nl`. Copy a sibling as a template.
+2. Numbers, child counts and heading levels follow from the position in the tree; there is nothing to renumber.
+3. Run `npm run build` and `node verify-explorer.mjs`. The check reads the prerendered HTML and reports any mismatch in nesting, numbers, counts, heading levels or scene mapping.
 
 Supported scenes: `satellite`, `satellite-component`, `instrument`, `instrument-component`, `optics`, `optical-path`, `optical-component`, `cad-parts`, `cad-part`. Satellite component ids are defined in `src/scene/objects/Satellite.js`; instrument part ids in `src/scene/objects/InstrumentComponents.js`.
 
@@ -95,9 +96,11 @@ Layout follows the available space: a bottom sheet below 720 px, a side panel fr
 
 See `CONVENTIONS.md`.
 
-- `src/app/` – explorer tree and viewer state
-- `src/ui/` – DOM bindings, explorer panel, markers, viewer controls and language
-- `src/scene/` – renderer, camera, lighting, explorer scene logic and scene objects
+- `src/routes/` – the SvelteKit page (`+page.svelte`) that composes the header, viewer and explorer
+- `src/app/` – explorer content, explorer tree, navigation state (`explorer.svelte.js`), viewer state and the viewer controller that connects the state to the 3D scene
+- `src/ui/` – Svelte components (header, explorer, explorer items, breadcrumb, viewer, viewer controls), the markers and language
+- `src/scene/` – renderer, camera, lighting, explorer scene logic and scene objects (plain JavaScript, independent of Svelte)
+- `static/` – files served as they are, such as `media/`
 - `src/assets/models/` – `satellite/` and `instrument/` hold the runtime viewer GLBs, `cad/` the individual CAD parts and `source/` the source models used to build them
 
 ## Replacing supplied CAD models
@@ -112,6 +115,8 @@ The satellite importer maps the component ids `xrayInstrument`, `starTrackerModu
 npm install
 npm run dev
 ```
+
+`npm run build` prerenders the site to `dist/`, so it can be hosted as static files.
 
 Before committing:
 
