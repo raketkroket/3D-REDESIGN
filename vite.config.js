@@ -6,6 +6,7 @@ export default defineConfig({
 	plugins: [
 		sveltekit({
 			adapter: adapter({ pages: 'dist', assets: 'dist' }),
+			alias: { $lib: 'src/lib' },
 		}),
 	],
 	worker: {

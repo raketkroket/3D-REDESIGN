@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { BoxGeometry, Group, Mesh } from 'three'
-import { createMotionDetail } from './src/scene/objects/MotionDetail.js'
+import { createMotionDetail } from './src/lib/scene/objects/MotionDetail.js'
 
 const previousWorker = globalThis.Worker
 globalThis.Worker = class {

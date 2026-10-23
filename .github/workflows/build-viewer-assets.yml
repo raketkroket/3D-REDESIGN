@@ -5,7 +5,7 @@ on:
     branches:
       - perf/viewer-assets
     paths:
-      - "src/assets/models/source/*.source-colors.glb"
+      - "src/lib/assets/models/source/*.source-colors.glb"
       - "scripts/optimize-model.mjs"
       - "verify-viewer-assets.mjs"
       - ".github/workflows/build-viewer-assets.yml"
@@ -35,8 +35,8 @@ jobs:
 
       - name: Build reduced viewer assets
         run: |
-          node scripts/optimize-model.mjs src/assets/models/source/Satellite.source-colors.glb src/assets/models/satellite/Satellite.viewer.glb 0.3 0.002
-          node scripts/optimize-model.mjs src/assets/models/source/Instrument.source-colors.glb src/assets/models/instrument/Instrument.viewer.glb 0.3 0.002
+          node scripts/optimize-model.mjs src/lib/assets/models/source/Satellite.source-colors.glb src/lib/assets/models/satellite/Satellite.viewer.glb 0.3 0.002
+          node scripts/optimize-model.mjs src/lib/assets/models/source/Instrument.source-colors.glb src/lib/assets/models/instrument/Instrument.viewer.glb 0.3 0.002
 
       - name: Verify hierarchy, colors, bounds and triangle reduction
         run: node verify-viewer-assets.mjs
@@ -45,7 +45,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/assets/models/satellite/Satellite.viewer.glb src/assets/models/instrument/Instrument.viewer.glb
+          git add src/lib/assets/models/satellite/Satellite.viewer.glb src/lib/assets/models/instrument/Instrument.viewer.glb
           if git diff --cached --quiet; then
             echo "Viewer assets already up to date."
           else

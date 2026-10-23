@@ -1,26 +1,23 @@
 import * as THREE from 'three'
 import TWEEN from 'three/examples/jsm/libs/tween.module.js'
-import { readLayoutMode } from '../ui/layoutMode.js'
-import { createMarkers } from '../ui/markers.js'
-import { createCamera } from '../scene/camera.js'
-import { createControls, updateControls } from '../scene/controls.js'
-import {
-	createExplorerScene,
-	getRepresentation,
-} from '../scene/explorerScene.js'
-import { createLights } from '../scene/lights.js'
-import { createMotionDetail } from '../scene/objects/MotionDetail.js'
+import { readLayoutMode } from '../utils/layoutMode.js'
+import { createMarkers } from './markers.js'
+import { createCamera } from './camera.js'
+import { createControls, updateControls } from './controls.js'
+import { createExplorerScene, getRepresentation } from './explorerScene.js'
+import { createLights } from './lights.js'
+import { createMotionDetail } from './objects/MotionDetail.js'
 import {
 	getComponentFromObject,
 	getModelStats,
 	loadSatellite,
-} from '../scene/objects/Satellite.js'
-import { createStars } from '../scene/objects/star.js'
-import { createRenderQuality } from '../scene/renderQuality.js'
-import { createScene } from '../scene/scene.js'
-import { isCameraMoving, stopCameraTween } from '../scene/updateCamera.js'
-import { createViewOffset } from '../scene/viewOffset.js'
-import { createCameraOrbit } from '../scene/cameraOrbit.js'
+} from './objects/Satellite.js'
+import { createStars } from './objects/star.js'
+import { createRenderQuality } from './renderQuality.js'
+import { createScene } from './scene.js'
+import { isCameraMoving, stopCameraTween } from './updateCamera.js'
+import { createViewOffset } from './viewOffset.js'
+import { createCameraOrbit } from './cameraOrbit.js'
 
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
 const orbitResumeDelay = 3500
@@ -374,7 +371,7 @@ export function createViewerController(
 				starfield.scale.setScalar(bounds.radius / 4.5)
 				try {
 					const { createCadInstances } =
-						await import('../scene/objects/CadInstances.js')
+						await import('./objects/CadInstances.js')
 					satellite.userData.cadInstances = createCadInstances(
 						satellite,
 						getComponentFromObject,

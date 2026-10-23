@@ -1,15 +1,18 @@
 <script>
 	import { onMount, tick, untrack } from 'svelte'
-	import { getRepresentation } from '../scene/explorerScene.js'
-	import { language, text } from './language.svelte.js'
-	import ViewerControls from './ViewerControls.svelte'
+	import ViewerLabel from '$lib/molecules/ViewerLabel.svelte'
+	import ViewerPoster from '$lib/molecules/ViewerPoster.svelte'
+	import ViewerControls from '$lib/organisms/ViewerControls.svelte'
+	import { getRepresentation } from '$lib/scene/explorerScene.js'
+	import { language, text } from '$lib/state/language.svelte.js'
 
 	let { explorer, onReady, onUnsupported } = $props()
 
-	const state = $derived(explorer.state)
-	const selectedItem = $derived(explorer.tree.get(state.selectedId))
-	const isRoot = $derived(state.selectedId === explorer.tree.rootId)
-	const representation = $derived(getRepresentation(selectedItem))
+	const { state, tree } = $derived(explorer)
+	const isRoot = $derived(state.selectedId === tree.rootId)
+	const representation = $derived(
+		getRepresentation(tree.get(state.selectedId)),
+	)
 	const tag = $derived(
 		representation === 'optics'
 			? 'schematic'
@@ -29,14 +32,14 @@
 		let disposed = false
 		let created = null
 		;(async () => {
-			const { createRenderer } = await import('../scene/renderer.js')
+			const { createRenderer } = await import('$lib/scene/renderer.js')
 			const renderer = createRenderer()
 			if (!renderer) {
 				onUnsupported()
 				return
 			}
 			const { createViewerController } =
-				await import('../app/viewerController.js')
+				await import('$lib/scene/viewerController.js')
 			if (disposed) {
 				renderer.dispose()
 				return
@@ -108,38 +111,16 @@
 		bind:this={markersElement}
 	></div>
 	<div class="viewer-visible-area" bind:this={visibleArea}>
-		<div class="viewer-poster" hidden={!state.posterVisible}>
-			<img
-				src="/media/satellite-overview.webp"
-				width="1200"
-				height="800"
-				loading="lazy"
-				decoding="async"
-				alt={language.current === 'nl'
-					? 'Weergave van de NEBULA Xplorer-satelliet: een kastvormig ruimtevaartuig met twee uitgeklapte zonnepanelen.'
-					: 'Rendering of the NEBULA Xplorer satellite: a box-shaped spacecraft with two deployed solar panels.'}
-			/>
-			<div class="viewer-poster-panel">
-				<p>{text('posterText')}</p>
-				<button
-					type="button"
-					class="viewer-load-model"
-					onclick={() => controller?.loadModel()}
-					>{text('loadModel')}</button
-				>
-			</div>
-		</div>
-		<p class="viewer-label" aria-hidden="true" hidden={isRoot}>
-			<span class="viewer-label-number"
-				>{explorer.tree.getNumber(state.selectedId) ?? ''}</span
-			>
-			<span class="viewer-label-name"
-				>{state.enhanced
-					? explorer.getFullTitle(state.selectedId)
-					: ''}</span
-			>
-			<span class="viewer-tag" hidden={!tag}>{tag ? text(tag) : ''}</span>
-		</p>
+		<ViewerPoster
+			visible={state.posterVisible}
+			onload={() => controller?.loadModel()}
+		/>
+		<ViewerLabel
+			hidden={isRoot}
+			number={tree.getNumber(state.selectedId) ?? ''}
+			name={state.enhanced ? explorer.getFullTitle(state.selectedId) : ''}
+			tag={tag ? text(tag) : ''}
+		/>
 		<p class="viewer-status" role="status" hidden={!state.status}>
 			{state.status
 				? text(state.status === 'error' ? 'loadError' : 'loading')

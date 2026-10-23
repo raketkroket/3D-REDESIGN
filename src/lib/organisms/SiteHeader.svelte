@@ -1,5 +1,6 @@
 <script>
-	import { language, setLanguage, text } from './language.svelte.js'
+	import LanguageSwitcher from '$lib/molecules/LanguageSwitcher.svelte'
+	import { text } from '$lib/state/language.svelte.js'
 
 	let { explorer } = $props()
 
@@ -27,20 +28,5 @@
 			>{text('mainWebsite')}</a
 		>
 	</nav>
-	<div class="language-switcher" role="group" aria-label="Language / Taal">
-		<button
-			type="button"
-			data-language="nl"
-			aria-pressed={String(language.current === 'nl')}
-			lang="nl"
-			onclick={() => setLanguage('nl')}>NL</button
-		>
-		<button
-			type="button"
-			data-language="en"
-			aria-pressed={String(language.current === 'en')}
-			lang="en"
-			onclick={() => setLanguage('en')}>EN</button
-		>
-	</div>
+	<LanguageSwitcher />
 </header>

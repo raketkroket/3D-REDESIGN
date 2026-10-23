@@ -13,10 +13,10 @@ import {
 	showSatellite,
 	showInstrument,
 	getCurrentView,
-} from './src/scene/objects/Satellite.js'
-import { showInstrumentInterior } from './src/scene/objects/Satellite.js'
-import { createInstrumentComponents } from './src/scene/objects/InstrumentComponents.js'
-import { updateCamera } from './src/scene/updateCamera.js'
+} from './src/lib/scene/objects/Satellite.js'
+import { showInstrumentInterior } from './src/lib/scene/objects/Satellite.js'
+import { createInstrumentComponents } from './src/lib/scene/objects/InstrumentComponents.js'
+import { updateCamera } from './src/lib/scene/updateCamera.js'
 globalThis.ProgressEvent = class {
 	constructor(type, init) {
 		Object.assign(this, init)

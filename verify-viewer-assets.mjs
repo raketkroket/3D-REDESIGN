@@ -86,13 +86,13 @@ async function verifyPair(sourcePath, viewerPath, expectedColors) {
 }
 
 const satellite = await verifyPair(
-	'./src/assets/models/source/Satellite.source-colors.glb',
-	'./src/assets/models/satellite/Satellite.viewer.glb',
+	'./src/lib/assets/models/source/Satellite.source-colors.glb',
+	'./src/lib/assets/models/satellite/Satellite.viewer.glb',
 	50,
 )
 const instrument = await verifyPair(
-	'./src/assets/models/source/Instrument.source-colors.glb',
-	'./src/assets/models/instrument/Instrument.viewer.glb',
+	'./src/lib/assets/models/source/Instrument.source-colors.glb',
+	'./src/lib/assets/models/instrument/Instrument.viewer.glb',
 	21,
 )
 

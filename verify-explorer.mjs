@@ -1,9 +1,9 @@
 import fs from 'node:fs/promises'
 import assert from 'node:assert/strict'
-import { createExplorerTree } from './src/app/explorerTree.js'
-import { explorerScenes } from './src/scene/explorerScene.js'
-import { opticalComponents } from './src/scene/objects/OpticalComponents.js'
-import { satelliteComponents } from './src/scene/objects/Satellite.js'
+import { createExplorerTree } from './src/lib/state/explorerTree.js'
+import { explorerScenes } from './src/lib/scene/explorerScene.js'
+import { opticalComponents } from './src/lib/scene/objects/OpticalComponents.js'
+import { satelliteComponents } from './src/lib/scene/objects/Satellite.js'
 
 const instrumentComponents = [
 	'detectors',

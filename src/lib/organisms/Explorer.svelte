@@ -1,20 +1,20 @@
 <script>
-	import { SHEET_STATES } from '../app/viewerState.svelte.js'
-	import ExplorerBreadcrumb from './ExplorerBreadcrumb.svelte'
-	import ExplorerNode from './ExplorerNode.svelte'
-	import { pick, text } from './language.svelte.js'
+	import ExplorerCredits from '$lib/molecules/ExplorerCredits.svelte'
+	import ExplorerBar from '$lib/organisms/ExplorerBar.svelte'
+	import ExplorerNode from '$lib/organisms/ExplorerNode.svelte'
+	import { SHEET_STATES } from '$lib/state/viewerState.svelte.js'
+	import { pick, text } from '$lib/state/language.svelte.js'
 
 	let { explorer } = $props()
 
 	const comfortableOffset = 12
-	const state = $derived(explorer.state)
-	const content = $derived(explorer.content)
+	const { state, tree, content } = $derived(explorer)
+	const { kicker, title, lead, figure, componentsLabel, mission, children } =
+		$derived(content)
 	const visible = $derived(state.enhanced && explorer.isVisible())
-	const sheetExpanded = $derived(state.sheetState === SHEET_STATES.EXPANDED)
 
 	let scrollElement = $state()
 	let scrollTimeout = null
-	let dragStart = null
 
 	function scrollToNode(id, smooth) {
 		clearTimeout(scrollTimeout)
@@ -25,7 +25,7 @@
 		const behavior = animate ? 'smooth' : 'auto'
 		const scroll = () => {
 			const link =
-				id === explorer.tree.rootId
+				id === tree.rootId
 					? null
 					: document
 							.getElementById(id)
@@ -63,7 +63,7 @@
 	function handleClick(event) {
 		if (!state.enhanced) return
 		const link = event.target.closest('a[href^="#"]')
-		if (link && explorer.tree.has(link.hash.slice(1))) {
+		if (link && tree.has(link.hash.slice(1))) {
 			event.preventDefault()
 			const id = link.hash.slice(1)
 			if (
@@ -100,31 +100,6 @@
 		if (!event.currentTarget.contains(event.relatedTarget))
 			explorer.setPreview(null)
 	}
-
-	function handleBarPointerdown(event) {
-		if (!explorer.isMobile() || event.target.closest('a, .explorer-close'))
-			return
-		dragStart = event.clientY
-	}
-
-	function handleBarPointerup(event) {
-		if (dragStart === null) return
-		const distance = event.clientY - dragStart
-		dragStart = null
-		if (distance < -40) explorer.setSheetState(SHEET_STATES.EXPANDED)
-		else if (distance > 40)
-			explorer.setSheetState(
-				state.sheetState === SHEET_STATES.EXPANDED
-					? SHEET_STATES.PEEK
-					: SHEET_STATES.CLOSED,
-			)
-	}
-
-	function toggleSheet() {
-		explorer.setSheetState(
-			sheetExpanded ? SHEET_STATES.PEEK : SHEET_STATES.EXPANDED,
-		)
-	}
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions, a11y_click_events_have_key_events -->
@@ -141,45 +116,7 @@
 	onpointerleave={() => state.enhanced && explorer.setPreview(null)}
 	onfocusout={handleFocusout}
 >
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div
-		class="explorer-bar"
-		onpointerdown={handleBarPointerdown}
-		onpointerup={handleBarPointerup}
-		onpointercancel={() => (dragStart = null)}
-	>
-		<button
-			type="button"
-			class="explorer-grabber"
-			aria-controls="explorer"
-			aria-expanded={String(sheetExpanded)}
-			aria-label={text(
-				sheetExpanded ? 'collapseExplorer' : 'expandExplorer',
-			)}
-			onclick={toggleSheet}
-		></button>
-		<ExplorerBreadcrumb {explorer} />
-		<p class="explorer-current" aria-hidden="true">
-			<span class="explorer-current-number"
-				>{explorer.tree.getNumber(state.selectedId) ?? ''}</span
-			>
-			<span class="explorer-current-title"
-				>{state.enhanced
-					? explorer.getFullTitle(state.selectedId)
-					: ''}</span
-			>
-		</p>
-		<button
-			type="button"
-			class="explorer-close"
-			aria-label={text('closeExplorer')}
-			onclick={() => explorer.closeExplorer()}
-		>
-			<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"
-				><path d="M3 3l10 10M13 3L3 13" /></svg
-			>
-		</button>
-	</div>
+	<ExplorerBar {explorer} />
 
 	<div class="explorer-scroll" bind:this={scrollElement}>
 		<div
@@ -188,17 +125,17 @@
 			data-explorer-item
 			data-scene={content.scene}
 		>
-			<p class="explorer-kicker">{pick(content.kicker)}</p>
-			<h1 class="explorer-title">{pick(content.title)}</h1>
-			<p class="explorer-lead">{pick(content.lead)}</p>
+			<p class="explorer-kicker">{pick(kicker)}</p>
+			<h1 class="explorer-title">{pick(title)}</h1>
+			<p class="explorer-lead">{pick(lead)}</p>
 			<figure class="explorer-figure">
 				<img
-					src={content.figure.src}
-					width={content.figure.width}
-					height={content.figure.height}
+					src={figure.src}
+					width={figure.width}
+					height={figure.height}
 					loading="lazy"
 					decoding="async"
-					alt={pick(content.figure.alt)}
+					alt={pick(figure.alt)}
 				/>
 			</figure>
 			<nav
@@ -209,10 +146,10 @@
 					class="explorer-section-label"
 					id="explorer-components-title"
 				>
-					{pick(content.componentsLabel)}
+					{pick(componentsLabel)}
 				</h2>
 				<ol class="explorer-tree">
-					{#each content.children as item, index (item.id)}
+					{#each children as item, index (item.id)}
 						<ExplorerNode
 							{item}
 							depth={1}
@@ -224,27 +161,12 @@
 			</nav>
 			<div class="explorer-about">
 				<h2 class="explorer-section-label">
-					{pick(content.mission.title)}
+					{pick(mission.title)}
 				</h2>
-				<p>{pick(content.mission.text)}</p>
+				<p>{pick(mission.text)}</p>
 			</div>
 		</div>
 
-		<footer class="explorer-credits">
-			<p>
-				<span>{text('missionCredit')}</span>
-				<img
-					src="/media/sron-logo.png"
-					width="66"
-					height="16"
-					alt="SRON"
-				/>
-			</p>
-			<p class="explorer-credits-link">
-				<a href="https://nebulaxplorer.dev.fdnd.nl/" rel="noreferrer"
-					>{text('mainWebsite')}</a
-				>
-			</p>
-		</footer>
+		<ExplorerCredits />
 	</div>
 </section>

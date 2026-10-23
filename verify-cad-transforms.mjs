@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import * as THREE from 'three'
-import { createCadInstances } from './src/scene/objects/CadInstances.js'
+import { createCadInstances } from './src/lib/scene/objects/CadInstances.js'
 const root = new THREE.Group()
 root.position.set(7, 8, 9)
 const material = new THREE.MeshStandardMaterial({ color: 0x8899aa })

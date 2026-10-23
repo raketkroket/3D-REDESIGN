@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { MathUtils, PerspectiveCamera, Vector3 } from 'three'
-import { createCameraOrbit } from './src/scene/cameraOrbit.js'
-import { getOrbitSettings } from './src/scene/explorerScene.js'
+import { createCameraOrbit } from './src/lib/scene/cameraOrbit.js'
+import { getOrbitSettings } from './src/lib/scene/explorerScene.js'
 
 const camera = new PerspectiveCamera(20, 1, 0.1, 100)
 const controls = { target: new Vector3(1, 2, 3) }

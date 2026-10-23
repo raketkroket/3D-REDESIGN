@@ -1,8 +1,11 @@
 import fs from 'node:fs/promises'
 import assert from 'node:assert/strict'
 import * as THREE from 'three'
-import { opticalComponents } from './src/scene/objects/OpticalComponents.js'
-import { createOptics, createPartViewer } from './src/scene/objects/Optics.js'
+import { opticalComponents } from './src/lib/scene/objects/OpticalComponents.js'
+import {
+	createOptics,
+	createPartViewer,
+} from './src/lib/scene/objects/Optics.js'
 globalThis.self = globalThis
 globalThis.ProgressEvent = class {
 	constructor(type, init) {

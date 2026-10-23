@@ -1,11 +1,11 @@
 <script>
-	import { text } from './language.svelte.js'
+	import { text } from '$lib/state/language.svelte.js'
 
 	let { explorer } = $props()
 
 	const collapsedBreadcrumbLength = 4
-	const state = $derived(explorer.state)
-	const path = $derived(explorer.tree.getPath(state.selectedId))
+	const { state, tree, getTitle } = $derived(explorer)
+	const path = $derived(tree.getPath(state.selectedId))
 	const collapsed = $derived(
 		!state.breadcrumbExpanded && path.length > collapsedBreadcrumbLength,
 	)
@@ -15,7 +15,7 @@
 	const hiddenTitles = $derived(
 		path
 			.slice(1, -2)
-			.map((item) => explorer.getTitle(item.id))
+			.map((item) => getTitle(item.id))
 			.join(', '),
 	)
 </script>
@@ -34,11 +34,9 @@
 							>…</button
 						>
 					{:else if item.id === state.selectedId}
-						<span aria-current="location"
-							>{explorer.getTitle(item.id)}</span
-						>
+						<span aria-current="location">{getTitle(item.id)}</span>
 					{:else}
-						<a href="#{item.id}">{explorer.getTitle(item.id)}</a>
+						<a href="#{item.id}">{getTitle(item.id)}</a>
 					{/if}
 				</li>
 			{/each}

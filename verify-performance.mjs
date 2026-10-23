@@ -3,9 +3,9 @@ import assert from 'node:assert/strict'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js'
-import { createCadInstances } from './src/scene/objects/CadInstances.js'
-import { createInstrumentComponents } from './src/scene/objects/InstrumentComponents.js'
-import { createRenderQuality } from './src/scene/renderQuality.js'
+import { createCadInstances } from './src/lib/scene/objects/CadInstances.js'
+import { createInstrumentComponents } from './src/lib/scene/objects/InstrumentComponents.js'
+import { createRenderQuality } from './src/lib/scene/renderQuality.js'
 import {
 	loadSatellite,
 	getSatellite,
@@ -16,7 +16,7 @@ import {
 	showSatelliteInterior,
 	showInstrument,
 	showInstrumentInterior,
-} from './src/scene/objects/Satellite.js'
+} from './src/lib/scene/objects/Satellite.js'
 globalThis.ProgressEvent = class {
 	constructor(type, init) {
 		Object.assign(this, init)
@@ -47,7 +47,7 @@ const sum = (meshes) =>
 const originalSource = (
 	await loader.loadAsync(
 		new URL(
-			'./src/assets/models/source/Satellite.source-colors.glb',
+			'./src/lib/assets/models/source/Satellite.source-colors.glb',
 			import.meta.url,
 		).href,
 	)
