@@ -63,7 +63,7 @@ There is one explorer state: the selected item. It determines the expanded path,
 
 ### Progressive enhancement and accessibility
 
-All content lives in `src/app/explorerContent.js` (English and Dutch side by side). SvelteKit prerenders it into one nested semantic list: every item is an `<li data-explorer-item>` with a heading containing a real link, a body with its confirmed description, and a nested `<ol>` of its parts. Without JavaScript or WebGL the page is a normal, fully expanded scrolling document with the same hierarchy, numbering and links. Every item is deep-linkable through its id, for example `/#instrument-detectors`.
+All content lives in `src/lib/server/explorerContent.js` (English and Dutch side by side). `src/routes/+page.server.js` loads it and SvelteKit prerenders it into one nested semantic list: every item is an `<li data-explorer-item>` with a heading containing a real link, a body with its confirmed description, and a nested `<ol>` of its parts. Without JavaScript or WebGL the page is a normal, fully expanded scrolling document with the same hierarchy, numbering and links. Every item is deep-linkable through its id, for example `/#instrument-detectors`.
 
 With JavaScript Svelte hydrates the same HTML into the explorer, and the 3D model enhances it:
 
@@ -82,11 +82,11 @@ Selecting an item flies the camera to a good viewing angle for it. After the fli
 
 ### Adding or removing an item
 
-1. Add or remove an entry in the `children` of its parent in `src/app/explorerContent.js`: a unique `id`, a `scene` (plus `component` where needed), a `title` and its `blocks` (`lead`, `note` or `about` paragraphs), each text with `en` and `nl`. Copy a sibling as a template.
+1. Add or remove an entry in the `children` of its parent in `src/lib/server/explorerContent.js`: a unique `id`, a `scene` (plus `component` where needed), a `title` and its `blocks` (`lead`, `note` or `about` paragraphs), each text with `en` and `nl`. Copy a sibling as a template.
 2. Numbers, child counts and heading levels follow from the position in the tree; there is nothing to renumber.
 3. Run `npm run build` and `node verify-explorer.mjs`. The check reads the prerendered HTML and reports any mismatch in nesting, numbers, counts, heading levels or scene mapping.
 
-Supported scenes: `satellite`, `satellite-component`, `instrument`, `instrument-component`, `optics`, `optical-path`, `optical-component`, `cad-parts`, `cad-part`. Satellite component ids are defined in `src/scene/objects/Satellite.js`; instrument part ids in `src/scene/objects/InstrumentComponents.js`.
+Supported scenes: `satellite`, `satellite-component`, `instrument`, `instrument-component`, `optics`, `optical-path`, `optical-component`, `cad-parts`, `cad-part`. Satellite component ids are defined in `src/lib/scene/objects/Satellite.js`; instrument part ids in `src/lib/scene/objects/InstrumentComponents.js`.
 
 ### Responsive design
 
@@ -94,20 +94,22 @@ Layout follows the available space: a bottom sheet below 720 px, a side panel fr
 
 ## Project structure
 
-See `CONVENTIONS.md`.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the team conventions and [`CONVENTIONS.md`](CONVENTIONS.md) for the project-specific ones.
 
-- `src/routes/` – the SvelteKit page (`+page.svelte`) that composes the header, viewer and explorer
-- `src/app/` – explorer content, explorer tree, navigation state (`explorer.svelte.js`), viewer state and the viewer controller that connects the state to the 3D scene
-- `src/ui/` – Svelte components (header, explorer, explorer items, breadcrumb, viewer, viewer controls), the markers and language
-- `src/scene/` – renderer, camera, lighting, explorer scene logic and scene objects (plain JavaScript, independent of Svelte)
+- `src/routes/` – `+page.server.js` loads the explorer content, `+page.svelte` composes the page from components
+- `src/lib/atoms/`, `src/lib/molecules/`, `src/lib/organisms/` – the Svelte components (atomic design), exported from `src/lib/index.js`
+- `src/lib/state/` – explorer tree, navigation state (`explorer.svelte.js`), viewer state and language
+- `src/lib/server/` – the explorer content
+- `src/lib/scene/` – renderer, camera, lighting, explorer scene logic, scene objects, markers and the viewer controller (plain JavaScript, independent of Svelte)
+- `src/lib/styles/global.css` – the styles
 - `static/` – files served as they are, such as `media/`
-- `src/assets/models/` – `satellite/` and `instrument/` hold the runtime viewer GLBs, `cad/` the individual CAD parts and `source/` the source models used to build them
+- `src/lib/assets/models/` – `satellite/` and `instrument/` hold the runtime viewer GLBs, `cad/` the individual CAD parts and `source/` the source models used to build them
 
 ## Replacing supplied CAD models
 
-The viewer loads `src/assets/models/satellite/Satellite.viewer.glb` and `src/assets/models/instrument/Instrument.viewer.glb`. They are generated from the source-colour GLBs in `src/assets/models/source/` by the **Build viewer assets** workflow (`scripts/optimize-model.mjs`). Keep the source file names to preserve loading and interaction.
+The viewer loads `src/lib/assets/models/satellite/Satellite.viewer.glb` and `src/lib/assets/models/instrument/Instrument.viewer.glb`. They are generated from the source-colour GLBs in `src/lib/assets/models/source/` by the **Build viewer assets** workflow (`scripts/optimize-model.mjs`). Keep the source file names to preserve loading and interaction.
 
-The satellite importer maps the component ids `xrayInstrument`, `starTrackerModule`, `dawn4UCubeDrive`, `sBandAntenna`, `sunSensor`, `magnetorquers` and `solarPanel` from the CAD hierarchy in `src/scene/objects/Satellite.js`. Keep the corresponding group-name prefixes in the export, or update that mapping after verifying click selection.
+The satellite importer maps the component ids `xrayInstrument`, `starTrackerModule`, `dawn4UCubeDrive`, `sBandAntenna`, `sunSensor`, `magnetorquers` and `solarPanel` from the CAD hierarchy in `src/lib/scene/objects/Satellite.js`. Keep the corresponding group-name prefixes in the export, or update that mapping after verifying click selection.
 
 ## Development and checks
 
